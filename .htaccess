@@ -1,0 +1,7 @@
+# Optional: redirect into /public when the project folder is the vhost root.
+# Safe when mod_rewrite is unavailable (commands are skipped).
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^$ public/ [L]
+    RewriteRule (.*) public/$1 [L]
+</IfModule>
