@@ -1,4 +1,7 @@
 <?php
+
+use App\Core\Url;
+
 /** @var string $baseUrl */
 /** @var string $appUrl */
 /** @var string $csrfToken */
@@ -112,8 +115,8 @@ $isLocked = is_array($submitLock) && !empty($submitLock['locked']);
 </form>
 
 <script>
-    window.APP_BASE = <?= json_encode($appUrl ?? '') ?>;
-    window.APP_STORE_URL = <?= json_encode(rtrim((string) ($appUrl ?? ''), '/') . '/store') ?>;
+    window.APP_BASE = <?= json_encode(Url::app()) ?>;
+    window.APP_STORE_URL = <?= json_encode(Url::endpoint('store')) ?>;
     window.SUBMIT_LOCK = <?= json_encode($submitLock, JSON_UNESCAPED_SLASHES) ?>;
 </script>
 <script src="<?= htmlspecialchars($baseUrl) ?>/assets/js/form.js"></script>

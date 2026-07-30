@@ -3,25 +3,75 @@
 Plain PHP **custom MVC** + MySQL + jQuery purchase-receipt entry and reporting tool.  
 **No** Laravel, CodeIgniter, or other PHP frameworks.
 
-**You do not need Composer to run this project.** Unzip → start Apache/MySQL → open the site → finish the **browser setup wizard**.  
+**You do not need Composer to run this project.** Prefer **Docker** (one command), or unzip → Apache/MySQL → browser setup wizard.  
 `composer install` is **optional** and only needed if you want to run PHPUnit / PHPCS.
 
 ---
 
-## Prerequisites
+## Quick start with Docker (recommended for developers)
+
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose v2).
+
+```bash
+cd purchase-entry-track
+docker compose down
+docker compose up --build
+```
+
+Use **`up --build`** (not only `start`) after pulling updates so images rebuild.
+
+Then open:
+
+| Page | URL |
+|------|-----|
+| Entry form | http://localhost:8080/ |
+| Report | http://localhost:8080/report |
+
+What Compose starts:
+
+- **app** — PHP 8.2 + Apache (`mod_rewrite`); code is **copied into the image** (no host bind-mount)
+- **db** — MySQL 8 image with `database/purchase_entry.sql` baked in for first-boot import
+
+This avoids Docker Desktop “mounts denied” errors when the project lives under `/Applications/MAMP/htdocs` (macOS often does not share `/Applications`).
+
+No `/install` wizard is needed: the app entrypoint waits for MySQL, writes a container-local DB config, and creates `config/installed.lock`. Your local `config/database.php` (MAMP/XAMPP) is left alone.
+
+Optional: copy `.env.example` → `.env` to change ports/passwords.
+
+```bash
+docker compose down          # stop
+docker compose down -v       # stop + wipe MySQL volume (re-seed on next up)
+```
+
+Host MySQL is published on **3307** by default (avoids clashing with MAMP/XAMPP).
+
+### Live-edit source from the host (optional)
+
+Default Compose does **not** mount the project folder (portable under MAMP’s `/Applications` path).
+
+For live reload, put the project under a shared path such as `~/Projects/…`, then:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+Or keep it in MAMP and add **`/Applications`** in Docker Desktop → Settings → Resources → File Sharing, then use the same `docker-compose.dev.yml` command.
+---
+
+## Prerequisites (without Docker)
 
 | Requirement | Suggested version |
 |-------------|-------------------|
 | PHP | **7.4+** (8.0–8.4 recommended). PHP 8 string helpers are polyfilled for 7.4 |
 | MySQL / MariaDB | 5.7+ / 10.3+ |
 | Apache | PHP module or PHP-FPM. `mod_rewrite` is **optional** |
-| Stack | XAMPP, WAMP, LAMP, or **MAMP** |
+| Stack | XAMPP, WAMP, LAMP, **MAMP**, or **Docker** |
 | Browser | Any modern browser |
 | Composer | **Not required** for the app. Optional for unit tests / code style only |
 
 ---
 
-## Quick start (no Composer)
+## Quick start (MAMP / XAMPP — no Composer)
 
 1. Place the folder in your web root (step 1 below).
 2. Start Apache + MySQL (step 2).
@@ -187,6 +237,9 @@ purchase-entry-track/
 ├── index.php            front controller (only HTTP entry)
 ├── .htaccess            ONLY htaccess — routing + block app/config/…
 ├── bootstrap.php
+├── docker-compose.yml   PHP + MySQL stack
+├── Dockerfile
+├── docker/              Apache vhost + app entrypoint
 ├── routes/
 │   └── web.php          all GET/POST routes
 ├── app/                 Controllers, Models, Views, Core (not web-routed)
@@ -266,7 +319,13 @@ If you never run `composer install`, the project still runs normally in the brow
 
 | Problem | Fix |
 |---------|-----|
-| Database connection failed | Re-open `/install`, fix credentials, Save again (or check MySQL is running) |
+| 403 Forbidden on `/purchase-entry-track` (no slash) | Fixed in `.htaccess` (`DirectorySlash On`). Hard-refresh or try Incognito. Prefer `http://localhost:8888/purchase-entry-track/` |
+| 403 Forbidden on `/purchase-entry-track/` | Ensure latest `.htaccess` (do not blanket-deny all `*.php`). Restart Apache in MAMP if needed |
+| Docker: mounts denied / `/Applications/...` not shared | Default Compose no longer bind-mounts the project. Run `docker compose down && docker compose up --build`. Or add `/Applications` under Docker Desktop → File Sharing |
+| Docker: port 8080 in use | Set `APP_PORT=8081` in `.env` and re-run `docker compose up` |
+| Docker: app stuck “Waiting for MySQL” | `docker compose logs db`; first boot can take ~30s; try `docker compose down -v && docker compose up --build` |
+| Docker: empty report / no tables | Wipe volume and re-import: `docker compose down -v && docker compose up --build` |
+| Database connection failed | Re-open `/install`, fix credentials, Save again (or check MySQL is running). Under Docker, ensure `DB_HOST=db` is set by Compose |
 | Redirected to `/install` forever | Finish the wizard; ensure `config/` is writable so `installed.lock` can be created |
 | Setup cannot write config | Give the web server write permission on `config/` |
 | 404 on report or store | Open `…/report` and `POST …/store` (front controller + `routes/web.php`) |
@@ -284,9 +343,10 @@ If you never run `composer install`, the project still runs normally in the brow
 
 Zip the project folder including:
 
-- Full source (`app/`, `public/`, `config/`, `database/`, `tests/`)
+- Full source (`app/`, `public/`, `config/`, `database/`, `tests/`, `docker/`)
 - `database/purchase_entry.sql`
+- `docker-compose.yml`, `Dockerfile`, `.env.example`
 - `README.md`, `CLAUDE.md`, `AI_USAGE.md`
 - `composer.json`, `phpunit.xml`, `phpcs.xml`
 
-You may omit `vendor/` from the ZIP. Reviewers **do not** need `composer install` to run the app; that command is only for optional tests.
+You may omit `vendor/` from the ZIP. Reviewers **do not** need `composer install` to run the app; that command is only for optional tests. With Docker: `docker compose up --build`.

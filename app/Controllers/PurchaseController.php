@@ -26,6 +26,7 @@ class PurchaseController extends Controller
             'title' => 'Purchase Entry',
             'baseUrl' => $this->baseUrl(),
             'appUrl' => $this->appUrl(),
+            'homeUrl' => $this->homeUrl(),
             'csrfToken' => Csrf::token(),
             'submitLock' => SubmitLock::status(),
         ]);

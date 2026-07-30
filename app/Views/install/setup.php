@@ -50,14 +50,39 @@ $importSql = $importSql ?? true;
 <?php endif; ?>
 
 <div class="card form-card install-card">
-    <div class="preset-row" role="group" aria-label="Common stack presets">
-        <span class="preset-label">Quick fill:</span>
-        <button type="button" class="btn btn-ghost" data-preset="mamp">MAMP</button>
-        <button type="button" class="btn btn-ghost" data-preset="xampp">XAMPP / WAMP</button>
-    </div>
+    <fieldset class="preset-box">
+        <legend class="preset-label">Quick fill — choose your local stack</legend>
+        <p class="preset-hint">This only fills the form fields below. Then click <strong>Save &amp; install</strong>.</p>
+        <div class="preset-row" role="radiogroup" aria-label="Database stack preset">
+            <button
+                type="button"
+                class="preset-btn"
+                data-preset="mamp"
+                role="radio"
+                aria-checked="false"
+                id="preset-mamp"
+            >
+                <span class="preset-btn-title">MAMP</span>
+                <span class="preset-btn-meta">Port 8889 · root / root</span>
+            </button>
+            <button
+                type="button"
+                class="preset-btn"
+                data-preset="xampp"
+                role="radio"
+                aria-checked="false"
+                id="preset-xampp"
+            >
+                <span class="preset-btn-title">XAMPP / WAMP</span>
+                <span class="preset-btn-meta">Port 3306 · root / (empty password)</span>
+            </button>
+        </div>
+        <p class="preset-selected" id="preset-selected" aria-live="polite">No stack selected yet — pick one above or type values manually.</p>
+    </fieldset>
 
     <form method="post" action="" class="install-form" autocomplete="off">
         <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+        <input type="hidden" name="stack_preset" id="stack_preset" value="">
 
         <div class="form-grid">
             <div class="field">
@@ -98,29 +123,86 @@ $importSql = $importSql ?? true;
             <button type="submit" class="btn btn-primary"><?= $alreadyInstalled ? 'Save again' : 'Save &amp; install' ?></button>
         </div>
     </form>
-
-    <p class="help-text">
-        Typical defaults — <strong>MAMP</strong>: port <code>8889</code>, user/pass <code>root</code>/<code>root</code>.
-        <strong>XAMPP/WAMP</strong>: port <code>3306</code>, user <code>root</code>, empty password.
-        Make sure MySQL is running before you click install.
-    </p>
 </div>
 
 <script>
 (function () {
     var presets = {
-        mamp: { host: '127.0.0.1', port: '8889', username: 'root', password: 'root', dbname: 'purchase_entry' },
-        xampp: { host: '127.0.0.1', port: '3306', username: 'root', password: '', dbname: 'purchase_entry' }
+        mamp: {
+            label: 'MAMP',
+            summary: 'Filled for MAMP: host 127.0.0.1, port 8889, user root, password root.',
+            values: { host: '127.0.0.1', port: '8889', username: 'root', password: 'root', dbname: 'purchase_entry' }
+        },
+        xampp: {
+            label: 'XAMPP / WAMP',
+            summary: 'Filled for XAMPP/WAMP: host 127.0.0.1, port 3306, user root, password empty.',
+            values: { host: '127.0.0.1', port: '3306', username: 'root', password: '', dbname: 'purchase_entry' }
+        }
     };
-    document.querySelectorAll('[data-preset]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var data = presets[btn.getAttribute('data-preset')];
-            if (!data) return;
-            Object.keys(data).forEach(function (key) {
-                var el = document.getElementById(key);
-                if (el) el.value = data[key];
+
+    var selectedEl = document.getElementById('preset-selected');
+    var stackInput = document.getElementById('stack_preset');
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-preset]'));
+
+    function applyPreset(name, fromClick) {
+        var preset = presets[name];
+        if (!preset) {
+            return;
+        }
+
+        Object.keys(preset.values).forEach(function (key) {
+            var el = document.getElementById(key);
+            if (el) {
+                el.value = preset.values[key];
+            }
+        });
+
+        buttons.forEach(function (btn) {
+            var active = btn.getAttribute('data-preset') === name;
+            btn.classList.toggle('is-selected', active);
+            btn.setAttribute('aria-checked', active ? 'true' : 'false');
+        });
+
+        if (stackInput) {
+            stackInput.value = name;
+        }
+        if (selectedEl) {
+            selectedEl.textContent = preset.summary + (fromClick ? ' Review the fields, then click Save & install.' : '');
+            selectedEl.classList.add('is-active');
+        }
+    }
+
+    function detectPreset() {
+        var current = {
+            host: (document.getElementById('host') || {}).value || '',
+            port: (document.getElementById('port') || {}).value || '',
+            username: (document.getElementById('username') || {}).value || '',
+            password: (document.getElementById('password') || {}).value || '',
+            dbname: (document.getElementById('dbname') || {}).value || ''
+        };
+
+        var matched = null;
+        Object.keys(presets).forEach(function (name) {
+            var values = presets[name].values;
+            var ok = Object.keys(values).every(function (key) {
+                return String(values[key]) === String(current[key]);
             });
+            if (ok) {
+                matched = name;
+            }
+        });
+
+        if (matched) {
+            applyPreset(matched, false);
+        }
+    }
+
+    buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            applyPreset(btn.getAttribute('data-preset'), true);
         });
     });
+
+    detectPreset();
 })();
 </script>

@@ -696,6 +696,29 @@
                 })
                 .fail(function (xhr) {
                     var res = xhr.responseJSON;
+                    if (!res && xhr.responseText) {
+                        try {
+                            res = JSON.parse(xhr.responseText);
+                        } catch (ignore) {
+                            res = null;
+                        }
+                    }
+
+                    if (!res) {
+                        var hint = 'Something went wrong. Please try again.';
+                        if (xhr.status === 404) {
+                            hint = 'Submit URL not found (HTTP 404). Re-upload the store/ folder and hard-refresh.';
+                        } else if (xhr.status === 419) {
+                            hint = 'Session expired. Refresh the page and try again.';
+                        } else if (xhr.status === 0) {
+                            hint = 'Network error. Check your connection and try again.';
+                        } else if (xhr.status) {
+                            hint = 'Server error (HTTP ' + xhr.status + '). Please try again.';
+                        }
+                        showAlert('error', 'Unable to submit.', [{ message: hint }]);
+                        return;
+                    }
+
                     applyServerErrors(res);
                     if (res && res.submit_lock) {
                         showSubmitLock(res.submit_lock);

@@ -75,10 +75,18 @@ abstract class Controller
     }
 
     /**
-     * Application base URL for routed links.
+     * Application base URL for routed links (may be "" at Docker DocumentRoot).
      */
     protected function appUrl(): string
     {
         return Url::app();
+    }
+
+    /**
+     * Home page href (never empty — use "/" when app is at domain root).
+     */
+    protected function homeUrl(): string
+    {
+        return Url::home();
     }
 }

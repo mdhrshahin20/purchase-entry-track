@@ -1,20 +1,22 @@
 <?php
+
+use App\Core\Url;
+
 /** @var string $baseUrl */
-/** @var string $appUrl */
 /** @var array $filters */
 /** @var list<int> $perPageOptions */
 /** @var array $rows */
 /** @var string|null $error */
 /** @var array{page:int,per_page:int,total:int,total_pages:int,from:int,to:int} $pagination */
 
-$appUrl = $appUrl ?? '';
+$reportPath = Url::path('/report');
 $perPageOptions = $perPageOptions ?? [5, 10, 25, 50];
 $currentPerPage = (int) ($pagination['per_page'] ?? 5);
 
 /**
  * Build a report URL preserving filters, per_page, and optional page.
  */
-$reportUrl = static function (array $filters, int $perPage, ?int $page = null) use ($appUrl): string {
+$reportUrl = static function (array $filters, int $perPage, ?int $page = null) use ($reportPath): string {
     $query = array_filter([
         'date_from' => $filters['date_from'] ?? '',
         'date_to' => $filters['date_to'] ?? '',
@@ -25,8 +27,7 @@ $reportUrl = static function (array $filters, int $perPage, ?int $page = null) u
         return $value !== '' && $value !== null;
     });
 
-    $path = $appUrl . '/report';
-    return $query === [] ? $path : $path . '?' . http_build_query($query);
+    return $query === [] ? $reportPath : $reportPath . '?' . http_build_query($query);
 };
 ?>
 <section class="page-head">
@@ -34,7 +35,7 @@ $reportUrl = static function (array $filters, int $perPage, ?int $page = null) u
     <p>Browse submissions with filters. Primary fields are listed first; open a row for contact details and note.</p>
 </section>
 
-<form id="report-filter" class="filter-bar" method="get" action="<?= htmlspecialchars($appUrl) ?>/report">
+<form id="report-filter" class="filter-bar" method="get" action="<?= htmlspecialchars($reportPath) ?>">
     <?php if ($currentPerPage !== 5): ?>
         <input type="hidden" name="per_page" value="<?= (int) $currentPerPage ?>">
     <?php endif; ?>
@@ -52,7 +53,7 @@ $reportUrl = static function (array $filters, int $perPage, ?int $page = null) u
     </div>
     <div class="filter-actions">
         <button type="submit" class="btn btn-primary">Filter</button>
-        <a class="btn btn-ghost" href="<?= htmlspecialchars($appUrl) ?>/report">Clear</a>
+        <a class="btn btn-ghost" href="<?= htmlspecialchars($reportPath) ?>">Clear</a>
     </div>
 </form>
 
@@ -154,7 +155,7 @@ $reportUrl = static function (array $filters, int $perPage, ?int $page = null) u
 </div>
 
 <div class="pagination-bar">
-    <form class="per-page-form" method="get" action="<?= htmlspecialchars($appUrl) ?>/report">
+    <form class="per-page-form" method="get" action="<?= htmlspecialchars($reportPath) ?>">
         <?php if (($filters['date_from'] ?? '') !== ''): ?>
             <input type="hidden" name="date_from" value="<?= htmlspecialchars($filters['date_from']) ?>">
         <?php endif; ?>

@@ -1,0 +1,15 @@
+.git
+.github
+.idea
+.vscode
+*.zip
+*.log
+.DS_Store
+/vendor/
+/.phpunit.cache/
+/config/installed.lock
+agent-transcripts
+node_modules
+README.md
+CLAUDE.md
+AI_USAGE.md

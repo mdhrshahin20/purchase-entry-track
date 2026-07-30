@@ -64,7 +64,6 @@ Csrf::startSession();
 
 // First-run gate: send visitors to the UI installer until setup finishes.
 if (!Installer::isInstalled() && !Installer::inInstaller()) {
-    $target = rtrim(Url::project(), '/') . '/install';
-    header('Location: ' . $target, true, 302);
+    header('Location: ' . Url::path('/install'), true, 302);
     exit;
 }

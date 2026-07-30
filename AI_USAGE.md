@@ -4,16 +4,17 @@ This project was built with AI coding assistance (Cursor) under human direction.
 
 ## What AI was used for
 
-1. **Custom MVC scaffolding** — `app/Controllers`, `app/Models`, `app/Views`, and `app/Core` (Router, Database, Validator, Csrf) without installing Laravel or any application framework.
+1. **Custom MVC scaffolding** — `app/Controllers`, `app/Models`, `app/Views`, and `app/Core` (Router, Application, Config, Database, Validator, Csrf) without installing Laravel or any application framework.
 2. **Validation parity** — matching frontend (jQuery) and backend (`Validator`) rules from the assignment brief.
-3. **Security** — CSRF session tokens, 24-hour submit cookie, server-only `buyer_ip` / `hash_key` / `entry_at`.
+3. **Security** — CSRF session tokens, 24-hour submit cookie with next-available time, server-only `buyer_ip` / `hash_key` / `entry_at`.
 4. **Report features** — date/user filters, pagination, per-page size (bottom only), serial `#`, Details accordion on the right.
 5. **SQL + seed data** — schema matching required columns and five sample rows with consistent SHA-512 `hash_key` values.
-6. **Quality tooling** — PHPUnit unit tests, PHPCS (PSR-12), PHPDoc on Core/Controllers/Models; Composer used only as optional dev tooling.
-7. **Documentation** — README installation guide, CLAUDE.md agent context, and this file.
-8. **Form UX** — realtime field validation and a clear error summary on submit.
+6. **First-run installer UI** — browser wizard writes `config/database.php` and imports SQL (no manual credential edits required).
+7. **Quality tooling** — PHPUnit unit tests, PHPCS (PSR-12), PHPDoc on Core/Controllers/Models; Composer used only as optional dev tooling.
+8. **Documentation** — README installation guide, CLAUDE.md agent context, and this file.
+9. **Form UX** — realtime field validation, word-limit note, and clear error summary on submit.
 
-Human decisions included: treating `receipt_id` as letters-only; storing multiple items as a comma-separated `varchar`; default timezone `Asia/Dhaka`; credentials only in `config/database.php`; and keeping a **classic MVC** layout (not a Laravel-lookalike) so the submission matches “your own MVC / no framework.”
+Human decisions included: treating `receipt_id` as letters-only; storing multiple items as a comma-separated `varchar`; default timezone `Asia/Dhaka`; central `Config` service instead of `require` in every action; and keeping a **classic MVC** layout (not a Laravel-lookalike) so the submission matches “your own MVC / no framework.”
 
 ## One prompt / approach that worked well
 
@@ -28,7 +29,7 @@ Tried `mod_rewrite`, then `FallbackResource`, then per-route root folders + many
 **Fix:** One front controller, one root `.htaccess` (route + block `*.php` except `index.php`), all endpoints in `routes/web.php` only.
 
 **Issue 2 — overly framework-like folders**  
-An intermediate layout mimicked Laravel (`Http/`, FormRequest, container, `routes/web.php`). Still not Laravel, but risky for a “no framework” brief.  
+An intermediate layout mimicked Laravel (`Http/`, FormRequest, container). Still not Laravel, but risky for a “no framework” brief.  
 **Fix:** Restructured to classic **Controllers / Models / Views / Core**.
 
 **Issue 3 — seed `hash_key` drift**  
@@ -39,14 +40,14 @@ Seed hashes must match `hash('sha512', receipt_id . salt)`.
 An early UI put per-page controls at top and bottom; the product preference was bottom only.  
 **Fix:** Single **Per page** control in the bottom pagination bar.
 
-**Issue 5 — Details column placement**  
-First pass put the Details toggle on the left of the table.  
-**Fix:** Moved serial `#` to the left and Details to the right (standard list + actions layout), with accordion UX in `report.js`.
+**Issue 5 — repeated `require` of config in controllers**  
+AI duplicated `$config = require dirname(__DIR__, 2) . '/config/app.php'` in every action.  
+**Fix:** Central `App\Core\Config` (`Config::app()`, `Config::database()`) and `$this->config()` on the base controller.
 
 ## What was verified locally
 
-- Form and report load on MAMP (`localhost:8888`)
+- Setup wizard + form + report on MAMP (`localhost:8888`)
 - AJAX store with CSRF; reject without token
 - Backend validation when JS is bypassed
-- Cookie blocks second submit within 24 hours
-- `composer test` (21 tests) and `composer phpcs` (PSR-12) pass after `composer install`
+- Cookie blocks second submit within 24 hours (with next-available warning)
+- Optional: `composer test` / `composer phpcs` after `composer install`

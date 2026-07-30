@@ -1,0 +1,47 @@
+services:
+  app:
+    build: .
+    container_name: purchase-entry-app
+    ports:
+      - "${APP_PORT:-8080}:80"
+    # No host bind-mount by default — works even when the project lives under
+    # /Applications/MAMP/htdocs (Docker Desktop often does not share /Applications).
+    # For live edit from a shared path (~/…), use: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+    environment:
+      APP_ENV: docker
+      APP_BASE_URL: ""
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-purchase_entry}
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_CHARSET: utf8mb4
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    build:
+      context: .
+      dockerfile: docker/mysql/Dockerfile
+    image: purchase-entry-mysql:8.0
+    container_name: purchase-entry-db
+    ports:
+      # Host 3307 avoids clashing with local MAMP/XAMPP MySQL on 3306/8889
+      - "${DB_PUBLISH_PORT:-3307}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_DATABASE:-purchase_entry}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  db_data:

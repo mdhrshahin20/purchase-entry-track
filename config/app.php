@@ -13,5 +13,7 @@ return [
     // Cookie that blocks repeat submissions for 24 hours
     'submit_cookie_name' => 'purchase_submitted',
     'submit_cookie_ttl' => 86400, // 24 hours in seconds
-    'base_url' => '', // Leave empty for auto-detection under /purchase-entry-track/public
+    // Subfolder (MAMP/XAMPP: /purchase-entry-track) → set as below.
+    // Docker overrides with APP_BASE_URL="" via entrypoint.
+    'base_url' => '/purchase-entry-track',
 ];

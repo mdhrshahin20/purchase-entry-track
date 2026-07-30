@@ -1,61 +1,39 @@
 # =============================================================================
-# ONE project .htaccess — global front controller
+# ONE project .htaccess — single front controller (index.php)
 #
-# - No report/, store/, install/ folders for routing
-# - No nested .htaccess files under app/config/…
-# - New features = add a line in routes/web.php only
+# Routes live only in routes/web.php. Do NOT add report/, store/, install/ folders.
+# Links use PATH_INFO: /index.php/report (works without rewrite on LiteSpeed).
+# Optional pretty URLs (/report) when rewrite is available.
 # =============================================================================
 
 DirectoryIndex index.php
-DirectorySlash Off
+DirectorySlash On
 Options -Indexes -MultiViews
 
-# -----------------------------------------------------------------------------
-# Security: only the front controller may run as PHP from the web tree.
-# (Replaces per-folder Deny .htaccess files.)
-# -----------------------------------------------------------------------------
 <IfModule mod_authz_core.c>
-    <FilesMatch "\.php$">
+    <Files "bootstrap.php">
         Require all denied
-    </FilesMatch>
-    <Files "index.php">
-        Require all granted
     </Files>
 </IfModule>
 <IfModule !mod_authz_core.c>
-    <FilesMatch "\.php$">
+    <Files "bootstrap.php">
         Deny from all
-    </FilesMatch>
-    <Files "index.php">
-        Allow from all
     </Files>
 </IfModule>
 
-# Strip trailing slash on app routes (avoids FallbackResource loops on /report/)
-# Portable: works for any project folder name under htdocs.
-RedirectMatch 301 ^/(.+)/(report|store|install)/$ /$1/$2
-
-# -----------------------------------------------------------------------------
-# Routing: prefer mod_rewrite; otherwise FallbackResource (MAMP default).
-# -----------------------------------------------------------------------------
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Allow /index.php/report (PATH_INFO)
+    RewriteRule ^index\.php(?:/.*)?$ - [L]
 
     RewriteRule ^public(/|$) - [L]
 
     RewriteRule ^(app|config|database|routes|tests|vendor)(/|$) - [F,L]
     RewriteRule ^bootstrap\.php$ - [F,L]
 
-    # /report/ → /report (no loop)
-    RewriteRule ^(report|store|install)/$ $1 [R=301,L]
-
+    # Optional pretty URLs when the host supports rewrite
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^ index.php [QSA,L]
-</IfModule>
-
-<IfModule !mod_rewrite.c>
-    <IfModule mod_dir.c>
-        FallbackResource index.php
-    </IfModule>
+    RewriteRule ^(.*)$ index.php/$1 [QSA,L]
 </IfModule>

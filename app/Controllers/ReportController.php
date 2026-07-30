@@ -79,6 +79,7 @@ class ReportController extends Controller
             'title' => 'Purchase Report',
             'baseUrl' => $this->baseUrl(),
             'appUrl' => $this->appUrl(),
+            'homeUrl' => $this->homeUrl(),
             'csrfToken' => Csrf::token(),
             'filters' => $filters,
             'perPageOptions' => self::PER_PAGE_OPTIONS,

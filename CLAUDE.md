@@ -9,7 +9,7 @@ Quick orientation for humans and AI coding agents working on this repo.
 - **jQuery 3.7** (CDN)
 - **Single front controller** `index.php` + **`routes/web.php`**
 - **One** root `.htaccess` (routing + security). No nested `.htaccess`, no per-route root folders.
-- XAMPP / WAMP / LAMP / MAMP
+- XAMPP / WAMP / LAMP / MAMP, or **Docker Compose** (`docker compose up --build` → http://localhost:8080/)
 - Composer optional (PHPUnit / PHPCS only)
 
 ## Architecture
@@ -28,8 +28,10 @@ Request → index.php → Application → routes/web.php → Router → Controll
 
 | Path | Role |
 |------|------|
-| `index.php` | Front controller |
-| `.htaccess` | **Only** htaccess — clean URLs + deny web PHP under `app/` etc. |
+| `index.php` | Front controller (only HTTP entry) |
+| `.htaccess` | Optional pretty URLs; PATH_INFO works without rewrite |
+| `bootstrap.php` | Autoload, session, install gate |
+| `routes/web.php` | **All** route definitions |
 | `bootstrap.php` | Autoload, session, install gate |
 | `routes/web.php` | **All** route definitions |
 | `app/Core/Config.php` | Cached app/database config (`Config::app()`, `Config::database()`) |
@@ -39,6 +41,16 @@ Request → index.php → Application → routes/web.php → Router → Controll
 | `config/` | app + database config (not publicly executable) |
 | `public/assets/` | CSS / JS |
 | `database/purchase_entry.sql` | Schema + seeds |
+| `docker-compose.yml` / `Dockerfile` | Local Docker stack (PHP Apache + MySQL) |
+| `docker/` | Apache vhost + entrypoint (wait for DB, create `installed.lock`) |
+
+### Docker notes
+
+- App DocumentRoot is the project root → URLs are `/`, `/report`, `/store` (no `/purchase-entry-track` prefix).
+- Default Compose copies the app into the image (no bind-mount) so `/Applications/MAMP/...` works without Docker File Sharing. Optional live mount: `docker-compose.dev.yml`.
+- MySQL image is built from `docker/mysql/Dockerfile` with `purchase_entry.sql` baked into `/docker-entrypoint-initdb.d/` (first volume boot only).
+- Entrypoint writes DB credentials to `/var/www/docker-config/database.php` (outside any bind mount). `Config::database()` loads that first so host `config/database.php` is unchanged.
+- App links use one front controller PATH_INFO (`/index.php/report`) — never add `report/` / `store/` root folders.
 
 ## Routes (`routes/web.php`)
 
@@ -50,12 +62,14 @@ Request → index.php → Application → routes/web.php → Router → Controll
 | GET | `/report` | `ReportController@index` |
 | GET/POST | `/install` | `InstallController@index` |
 
-URLs:
+URLs (single front controller — **no** `report/` / `store/` folders):
 
-- `/purchase-entry-track/`
-- `/purchase-entry-track/report`
-- `POST /purchase-entry-track/store`
-- `/purchase-entry-track/install`
+- `/purchase-entry-track/` or `/`
+- `/purchase-entry-track/index.php/report`
+- `POST /purchase-entry-track/index.php/store`
+- `/purchase-entry-track/index.php/install`
+
+Optional pretty URLs (`/report`) when Apache/LiteSpeed rewrite is enabled.
 
 ## Coding conventions
 

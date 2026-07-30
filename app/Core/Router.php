@@ -69,6 +69,12 @@ class Router
      */
     public function dispatch(string $method, string $uri): void
     {
+        $method = strtoupper($method);
+        // Browsers and tools may send HEAD; treat like GET for route matching.
+        if ($method === 'HEAD') {
+            $method = 'GET';
+        }
+
         $path = $this->resolvePath($uri);
         $handler = $this->routes[$method][$path] ?? null;
 
@@ -98,7 +104,8 @@ class Router
         }
 
         $path = parse_url($uri, PHP_URL_PATH) ?: '/';
-        $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+        $path = str_replace('\\', '/', (string) $path);
+        $scriptName = \App\Core\Url::scriptUrlPath();
 
         if ($scriptName !== '' && str_starts_with($path, $scriptName)) {
             $path = substr($path, strlen($scriptName)) ?: '/';

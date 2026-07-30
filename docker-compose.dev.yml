@@ -1,0 +1,11 @@
+# Optional live-reload overlay (project must be on a Docker-shared path).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Docker Desktop → Settings → Resources → File Sharing must include your project
+# folder (e.g. /Users/you/... or add /Applications if you keep it under MAMP).
+
+services:
+  app:
+    volumes:
+      - .:/var/www/html

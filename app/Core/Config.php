@@ -60,7 +60,12 @@ class Config
     }
 
     /**
-     * Database config from config/database.php.
+     * Database config from config/database.php, with Docker/env overrides.
+     *
+     * Precedence:
+     * 1. config/database.docker.php (written by docker/entrypoint.sh — never commit)
+     * 2. DB_* environment variables
+     * 3. config/database.php (local MAMP/XAMPP)
      *
      * @param string|null $key     Optional key (e.g. host, dbname).
      * @param mixed       $default Default when key is missing.
@@ -71,8 +76,51 @@ class Config
     {
         if (self::$database === null) {
             $path = self::basePath('config/database.php');
+            // Prefer container-local file (outside the bind mount) so MAMP/XAMPP
+            // config/database.php is never shadowed after docker compose stops.
+            $dockerPath = getenv('DOCKER_DB_CONFIG') ?: '/var/www/docker-config/database.php';
+
             /** @var array<string, mixed> $data */
-            $data = require $path;
+            if (is_string($dockerPath) && $dockerPath !== '' && is_file($dockerPath)) {
+                $data = require $dockerPath;
+            } elseif (is_file($path)) {
+                $data = require $path;
+            } else {
+                $data = [];
+            }
+
+            if (!is_array($data)) {
+                $data = [];
+            }
+
+            $data = array_merge([
+                'host' => '127.0.0.1',
+                'port' => '3306',
+                'dbname' => 'purchase_entry',
+                'username' => 'root',
+                'password' => '',
+                'charset' => 'utf8mb4',
+            ], $data);
+
+            // Env overrides when no Docker config file is present.
+            if (!(is_string($dockerPath) && $dockerPath !== '' && is_file($dockerPath))) {
+                $envMap = [
+                    'host' => 'DB_HOST',
+                    'port' => 'DB_PORT',
+                    'dbname' => 'DB_DATABASE',
+                    'username' => 'DB_USERNAME',
+                    'password' => 'DB_PASSWORD',
+                    'charset' => 'DB_CHARSET',
+                ];
+
+                foreach ($envMap as $cfgKey => $envKey) {
+                    $value = getenv($envKey);
+                    if ($value !== false && $value !== '') {
+                        $data[$cfgKey] = $value;
+                    }
+                }
+            }
+
             self::$database = $data;
         }
 
