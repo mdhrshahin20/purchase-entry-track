@@ -77,8 +77,8 @@ Open the project URL (or go straight to setup):
 
 | Stack | Setup URL |
 |-------|-----------|
-| MAMP (8888) | http://localhost:8888/purchase-entry-track/install/ |
-| Apache :80 | http://localhost/purchase-entry-track/install/ |
+| MAMP (8888) | http://localhost:8888/purchase-entry-track/install |
+| Apache :80 | http://localhost/purchase-entry-track/install |
 
 Until setup finishes, visiting the home page automatically redirects here.
 
@@ -98,7 +98,7 @@ The wizard will:
 
 ### Re-run setup later
 
-Delete `config/installed.lock`, then open `/install/` again (optional **Force reinstall**).
+Delete `config/installed.lock`, then open `/install` again (optional **Force reinstall**).
 
 Ensure the web server can write inside `config/` (normal for local MAMP/XAMPP).
 
@@ -130,16 +130,15 @@ Timezone, hash salt, and the 24h submit cookie live in `config/app.php` (default
 
 ## 5. Open and test under localhost
 
-After the wizard:
-
 | Stack | Entry form | Report |
 |-------|------------|--------|
 | MAMP (8888) | http://localhost:8888/purchase-entry-track/ | http://localhost:8888/purchase-entry-track/report |
 | Apache :80 | http://localhost/purchase-entry-track/ | http://localhost/purchase-entry-track/report |
 
-Apache may show `/report/` with a trailing slash; that is normal.
+Setup: `…/install` · Store: `POST …/store`  
+Prefer **no trailing slash** (`/report`, not `/report/`).
 
-AJAX store endpoint: `POST …/purchase-entry-track/purchase/store/`
+Routing is global via the root `.htaccess` + `routes/web.php`.
 
 ### Smoke-test checklist
 
@@ -171,41 +170,32 @@ AJAX store endpoint: `POST …/purchase-entry-track/purchase/store/`
 
 ## Architecture overview
 
-Custom MVC + OOP (plain PHP):
+Custom MVC + OOP (plain PHP), **one front controller**, **one `.htaccess`**:
 
 ```text
-Request → entry script (/, /report, /purchase/store/) → Controller → Model (PDO) → View
+Request → index.php → bootstrap.php → Application → routes/web.php → Router
+        → Controller → Model (PDO) → View
 ```
+
+To add a feature: create a controller action and register it in **`routes/web.php` only**.  
+Do **not** add root folders like `report/` or extra `.htaccess` files under `app/`.
 
 ### Folder structure
 
 ```text
 purchase-entry-track/
-├── index.php            → `/purchase-entry-track/`
-├── install/index.php    → `/purchase-entry-track/install/` (first-run DB wizard)
-├── report/index.php     → `/purchase-entry-track/report`
-├── purchase/store/index.php → `POST …/purchase/store/`
-├── bootstrap.php        shared boot (autoload, session, install gate)
-├── app/
-│   ├── Controllers/     PurchaseController, ReportController
-│   ├── Models/          Purchase
-│   ├── Views/           layouts, purchase/form, report/index
-│   └── Core/            Router, Database, Controller, Model, Validator, Csrf
+├── index.php            front controller (only HTTP entry)
+├── .htaccess            ONLY htaccess — routing + block app/config/…
+├── bootstrap.php
+├── routes/
+│   └── web.php          all GET/POST routes
+├── app/                 Controllers, Models, Views, Core (not web-routed)
 ├── config/
-│   ├── app.php          timezone, hash salt, cookie settings
-│   └── database.php     DB credentials (edit this for local MySQL)
 ├── database/
 │   └── purchase_entry.sql
 ├── public/
-│   ├── index.php        app bootstrap + routes (also valid entry URL)
-│   ├── .htaccess        optional rewrite (wrapped in IfModule)
-│   └── assets/
-│       ├── css/style.css
-│       └── js/form.js, report.js
-├── tests/               PHPUnit unit tests
-├── composer.json        optional (PHPUnit + PHPCS only)
-├── phpunit.xml
-├── phpcs.xml
+│   └── assets/          css + js
+├── tests/
 ├── README.md
 ├── CLAUDE.md
 └── AI_USAGE.md
@@ -213,10 +203,13 @@ purchase-entry-track/
 
 | Layer | Responsibility |
 |-------|----------------|
-| **Controller** | HTTP input, CSRF, validation orchestration, cookies, JSON/HTML |
-| **Model** | PDO prepared statements only |
-| **View** | HTML templates (`htmlspecialchars` on output) |
-| **Core** | Router, Database, Validator, Csrf, base Controller/Model |
+| **routes/web.php** | Maps URLs → controller actions |
+| **Application** | Loads routes and dispatches |
+| **Controller** | HTTP / CSRF / cookies / JSON/HTML |
+| **Model** | PDO prepared statements |
+| **View** | Templates |
+| **Core** | Router, Url, Database, Validator, Csrf, Installer, SubmitLock |
+| **`.htaccess`** | Clean URLs + deny direct PHP under `app/` etc. |
 
 ---
 
@@ -241,7 +234,7 @@ purchase-entry-track/
 
 | Item | Default |
 |------|---------|
-| Setup wizard | `/install/` (UI — preferred) |
+| Setup wizard | `/install` (UI — preferred) |
 | DB name | `purchase_entry` |
 | DB user | `root` |
 | DB password | `root` (MAMP) or empty (XAMPP/WAMP) |
@@ -273,10 +266,10 @@ If you never run `composer install`, the project still runs normally in the brow
 
 | Problem | Fix |
 |---------|-----|
-| Database connection failed | Re-open `/install/`, fix credentials, Save again (or check MySQL is running) |
-| Redirected to `/install/` forever | Finish the wizard; ensure `config/` is writable so `installed.lock` can be created |
+| Database connection failed | Re-open `/install`, fix credentials, Save again (or check MySQL is running) |
+| Redirected to `/install` forever | Finish the wizard; ensure `config/` is writable so `installed.lock` can be created |
 | Setup cannot write config | Give the web server write permission on `config/` |
-| 404 on report or store | Open `…/purchase-entry-track/report` and `…/purchase/store/` (folder entry points) |
+| 404 on report or store | Open `…/report` and `POST …/store` (front controller + `routes/web.php`) |
 | 500 mentioning `RewriteEngine` | App does not require rewrite; ignore or leave `IfModule` wrappers as-is |
 | CSS/JS missing | Hard-refresh; assets are under `/purchase-entry-track/public/assets/` |
 | CSRF token mismatch | Refresh the form page so a new session token loads |

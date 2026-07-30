@@ -23,9 +23,9 @@ A useful follow-up: *“Align JS and PHP validators field-by-field; phone must p
 
 ## Where AI was wrong or suboptimal — and how it was fixed
 
-**Issue 1 — `mod_rewrite` assumed always on**  
-Bare `RewriteEngine On` caused HTTP 500 on MAMP builds without rewrite; MAMP often ships with `mod_rewrite` commented out, so `/report` via `.htaccess` never matched.  
-**Fix:** Folder entry points (`report/index.php`, `purchase/store/index.php`) for clean URLs without rewrite, plus `IfModule` wrappers where rewrite is optional.
+**Issue 1 — routing architecture**  
+Tried `mod_rewrite`, then `FallbackResource`, then per-route root folders + many `.htaccess` files. Folders-per-route and nested Deny files do not scale.  
+**Fix:** One front controller, one root `.htaccess` (route + block `*.php` except `index.php`), all endpoints in `routes/web.php` only.
 
 **Issue 2 — overly framework-like folders**  
 An intermediate layout mimicked Laravel (`Http/`, FormRequest, container, `routes/web.php`). Still not Laravel, but risky for a “no framework” brief.  

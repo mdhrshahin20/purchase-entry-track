@@ -7,7 +7,7 @@
 
     var items = [];
     var base = window.APP_BASE || '';
-    var storeUrl = window.APP_STORE_URL || (base + '/purchase/store/');
+    var storeUrl = window.APP_STORE_URL || (base.replace(/\/?$/, '') + '/store');
     var submittedOnce = false;
     var touched = {};
     var lockTimer = null;

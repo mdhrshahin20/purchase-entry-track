@@ -46,6 +46,18 @@ final class RouterTest extends TestCase
         unset($_SERVER['PATH_INFO']);
     }
 
+    public function testResolvePathStripsProjectBaseForPrettyUrl(): void
+    {
+        unset($_SERVER['PATH_INFO']);
+        $_SERVER['SCRIPT_NAME'] = '/purchase-entry-track/index.php';
+        $_SERVER['REQUEST_URI'] = '/purchase-entry-track/report';
+
+        $method = new ReflectionMethod(Router::class, 'resolvePath');
+        $method->setAccessible(true);
+
+        $this->assertSame('/report', $method->invoke($this->router, $_SERVER['REQUEST_URI']));
+    }
+
     public function testUnknownRouteReturns404(): void
     {
         ob_start();

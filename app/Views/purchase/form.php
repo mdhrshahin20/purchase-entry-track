@@ -44,7 +44,7 @@ $isLocked = is_array($submitLock) && !empty($submitLock['locked']);
 
         <div class="field">
             <label for="buyer">Buyer *</label>
-            <input type="text" id="buyer" name="buyer" maxlength="20" placeholder="Name (max 20 chars)" aria-describedby="error-buyer">
+            <input type="text" id="buyer" name="buyer" maxlength="20" placeholder="Name (max 20)" aria-describedby="error-buyer">
             <span class="error" id="error-buyer" data-error="buyer"></span>
         </div>
 
@@ -113,7 +113,7 @@ $isLocked = is_array($submitLock) && !empty($submitLock['locked']);
 
 <script>
     window.APP_BASE = <?= json_encode($appUrl ?? '') ?>;
-    window.APP_STORE_URL = <?= json_encode(($appUrl ?? '') . '/purchase/store/') ?>;
+    window.APP_STORE_URL = <?= json_encode(rtrim((string) ($appUrl ?? ''), '/') . '/store') ?>;
     window.SUBMIT_LOCK = <?= json_encode($submitLock, JSON_UNESCAPED_SLASHES) ?>;
 </script>
 <script src="<?= htmlspecialchars($baseUrl) ?>/assets/js/form.js"></script>

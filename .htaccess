@@ -1,10 +1,61 @@
-# Prefer DirectoryIndex for clean folder URLs (works without mod_rewrite).
-DirectoryIndex index.php
+# =============================================================================
+# ONE project .htaccess — global front controller
+#
+# - No report/, store/, install/ folders for routing
+# - No nested .htaccess files under app/config/…
+# - New features = add a line in routes/web.php only
+# =============================================================================
 
-# Optional: if the host enables mod_rewrite, keep assets public and
-# deny raw access to source folders (also enforced by per-folder .htaccess).
+DirectoryIndex index.php
+DirectorySlash Off
+Options -Indexes -MultiViews
+
+# -----------------------------------------------------------------------------
+# Security: only the front controller may run as PHP from the web tree.
+# (Replaces per-folder Deny .htaccess files.)
+# -----------------------------------------------------------------------------
+<IfModule mod_authz_core.c>
+    <FilesMatch "\.php$">
+        Require all denied
+    </FilesMatch>
+    <Files "index.php">
+        Require all granted
+    </Files>
+</IfModule>
+<IfModule !mod_authz_core.c>
+    <FilesMatch "\.php$">
+        Deny from all
+    </FilesMatch>
+    <Files "index.php">
+        Allow from all
+    </Files>
+</IfModule>
+
+# Strip trailing slash on app routes (avoids FallbackResource loops on /report/)
+# Portable: works for any project folder name under htdocs.
+RedirectMatch 301 ^/(.+)/(report|store|install)/$ /$1/$2
+
+# -----------------------------------------------------------------------------
+# Routing: prefer mod_rewrite; otherwise FallbackResource (MAMP default).
+# -----------------------------------------------------------------------------
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^(public)(/|$) - [L]
-    RewriteRule ^(app|config|database|tests|vendor|bootstrap\.php)(/|$) - [F,L]
+
+    RewriteRule ^public(/|$) - [L]
+
+    RewriteRule ^(app|config|database|routes|tests|vendor)(/|$) - [F,L]
+    RewriteRule ^bootstrap\.php$ - [F,L]
+
+    # /report/ → /report (no loop)
+    RewriteRule ^(report|store|install)/$ $1 [R=301,L]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    <IfModule mod_dir.c>
+        FallbackResource index.php
+    </IfModule>
 </IfModule>

@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Installer;
+use App\Core\Url;
 use PDOException;
 use RuntimeException;
 use Throwable;
@@ -21,8 +22,9 @@ class InstallController extends Controller
      */
     public function index(): void
     {
-        $appUrl = Installer::projectUrl();
-        $baseUrl = $appUrl === '' ? '/public' : $appUrl . '/public';
+        $appUrl = Url::app();
+        $baseUrl = Url::assets();
+        $homeUrl = Url::project() === '' ? '/' : rtrim(Url::project(), '/') . '/';
         $alreadyInstalled = Installer::isInstalled();
         $config = Installer::defaultConfig();
         $errors = [];
@@ -64,6 +66,7 @@ class InstallController extends Controller
             'title' => 'Setup',
             'baseUrl' => $baseUrl,
             'appUrl' => $appUrl,
+            'homeUrl' => $homeUrl,
             'csrfToken' => Csrf::token(),
             'config' => $config,
             'errors' => $errors,

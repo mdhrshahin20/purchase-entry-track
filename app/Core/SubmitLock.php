@@ -10,7 +10,7 @@ namespace App\Core;
 class SubmitLock
 {
     /**
-     * @param array<string, mixed> $config Application config from config/app.php.
+     * @param array<string, mixed>|null $config Optional override; defaults to Config::app().
      *
      * @return array{
      *   locked: bool,
@@ -21,8 +21,9 @@ class SubmitLock
      *   message: string
      * }|null
      */
-    public static function status(array $config): ?array
+    public static function status(?array $config = null): ?array
     {
+        $config = $config ?? Config::app();
         $cookieName = (string) ($config['submit_cookie_name'] ?? 'purchase_submitted');
         if (!isset($_COOKIE[$cookieName]) || $_COOKIE[$cookieName] === '') {
             return null;
@@ -50,7 +51,7 @@ class SubmitLock
     /**
      * Set the HttpOnly lock cookie to the unlock unix timestamp.
      *
-     * @param array<string, mixed> $config
+     * @param array<string, mixed>|null $config Optional override; defaults to Config::app().
      *
      * @return array{
      *   available_at: string,
@@ -59,8 +60,9 @@ class SubmitLock
      *   remaining_label: string
      * }
      */
-    public static function setCookie(array $config): array
+    public static function setCookie(?array $config = null): array
     {
+        $config = $config ?? Config::app();
         $ttl = max(1, (int) ($config['submit_cookie_ttl'] ?? 86400));
         $cookieName = (string) ($config['submit_cookie_name'] ?? 'purchase_submitted');
         $availableAt = time() + $ttl;

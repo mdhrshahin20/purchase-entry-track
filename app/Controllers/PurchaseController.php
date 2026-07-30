@@ -22,15 +22,12 @@ class PurchaseController extends Controller
      */
     public function index(): void
     {
-        $config = require dirname(__DIR__, 2) . '/config/app.php';
-        $submitLock = SubmitLock::status($config);
-
         $this->view('purchase/form', [
             'title' => 'Purchase Entry',
             'baseUrl' => $this->baseUrl(),
             'appUrl' => $this->appUrl(),
             'csrfToken' => Csrf::token(),
-            'submitLock' => $submitLock,
+            'submitLock' => SubmitLock::status(),
         ]);
     }
 
@@ -44,8 +41,6 @@ class PurchaseController extends Controller
      */
     public function store(): void
     {
-        $config = require dirname(__DIR__, 2) . '/config/app.php';
-
         if (!Csrf::validate(Csrf::tokenFromRequest())) {
             $this->json([
                 'success' => false,
@@ -54,7 +49,7 @@ class PurchaseController extends Controller
             return;
         }
 
-        $lock = SubmitLock::status($config);
+        $lock = SubmitLock::status();
         if ($lock !== null) {
             $this->json([
                 'success' => false,
@@ -87,7 +82,7 @@ class PurchaseController extends Controller
         }
 
         $buyerIp = substr((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'), 0, 20);
-        $hashKey = hash('sha512', $input['receipt_id'] . $config['hash_salt']);
+        $hashKey = hash('sha512', $input['receipt_id'] . (string) $this->config('hash_salt', ''));
         $entryAt = date('Y-m-d');
 
         try {
@@ -114,7 +109,7 @@ class PurchaseController extends Controller
             return;
         }
 
-        $unlock = SubmitLock::setCookie($config);
+        $unlock = SubmitLock::setCookie();
 
         $this->json([
             'success' => true,

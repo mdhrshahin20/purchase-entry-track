@@ -54,46 +54,31 @@ abstract class Controller
     }
 
     /**
-     * Project web root URL (no trailing slash), e.g. /purchase-entry-track.
+     * Application config value or full array (via Config).
      *
-     * @return string
+     * @param string|null $key
+     * @param mixed       $default
+     *
+     * @return mixed
      */
-    protected function projectUrl(): string
+    protected function config(?string $key = null, $default = null)
     {
-        $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
-        $dir = str_replace('\\', '/', dirname($script));
-
-        // Nested entry points: /report, /purchase/store, /public → project root
-        $dir = preg_replace('#/(report|public)$#', '', $dir) ?? $dir;
-        $dir = preg_replace('#/purchase(/store)?$#', '', $dir) ?? $dir;
-
-        if ($dir === '/' || $dir === '\\' || $dir === '.' || $dir === '') {
-            return '';
-        }
-
-        return rtrim($dir, '/');
+        return Config::app($key, $default);
     }
 
     /**
      * Public directory URL for static assets (no trailing slash).
-     *
-     * @return string
      */
     protected function baseUrl(): string
     {
-        $project = $this->projectUrl();
-        return $project === '' ? '/public' : $project . '/public';
+        return Url::assets();
     }
 
     /**
-     * Application base URL for links and AJAX (clean paths, no index.php).
-     *
-     * Examples: /purchase-entry-track  →  /purchase-entry-track/report
-     *
-     * @return string
+     * Application base URL for routed links.
      */
     protected function appUrl(): string
     {
-        return $this->projectUrl();
+        return Url::app();
     }
 }

@@ -3,8 +3,7 @@
 /**
  * Shared application bootstrap (autoload, timezone, CSRF session).
  *
- * Used by root/public entry scripts and pretty path entry points
- * (report/, purchase/store/) so clean URLs work without mod_rewrite.
+ * Front controller: index.php → Application → routes/web.php → Controller.
  */
 
 declare(strict_types=1);
@@ -42,9 +41,6 @@ if (!function_exists('str_contains')) {
     }
 }
 
-$config = require __DIR__ . '/config/app.php';
-date_default_timezone_set($config['timezone']);
-
 spl_autoload_register(static function (string $class): void {
     $prefix = 'App\\';
     if (!str_starts_with($class, $prefix)) {
@@ -57,14 +53,18 @@ spl_autoload_register(static function (string $class): void {
     }
 });
 
+use App\Core\Config;
 use App\Core\Csrf;
 use App\Core\Installer;
+use App\Core\Url;
+
+date_default_timezone_set((string) Config::app('timezone', 'UTC'));
 
 Csrf::startSession();
 
 // First-run gate: send visitors to the UI installer until setup finishes.
 if (!Installer::isInstalled() && !Installer::inInstaller()) {
-    $target = Installer::projectUrl() . '/install/';
+    $target = rtrim(Url::project(), '/') . '/install';
     header('Location: ' . $target, true, 302);
     exit;
 }

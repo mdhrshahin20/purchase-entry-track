@@ -21,7 +21,7 @@ $importSql = $importSql ?? true;
     <div class="alert alert-success">
         <?= htmlspecialchars($success) ?>
         <p class="install-next">
-            <a class="btn btn-primary" href="<?= htmlspecialchars($appUrl === '' ? '/' : $appUrl . '/') ?>">Open application</a>
+            <a class="btn btn-primary" href="<?= htmlspecialchars($homeUrl ?? ($appUrl ?: '/')) ?>">Open application</a>
         </p>
     </div>
 <?php endif; ?>
@@ -44,7 +44,7 @@ $importSql = $importSql ?? true;
     <div class="alert alert-success">
         Setup is already complete.
         <p class="install-next">
-            <a class="btn btn-primary" href="<?= htmlspecialchars($appUrl === '' ? '/' : $appUrl . '/') ?>">Open application</a>
+            <a class="btn btn-primary" href="<?= htmlspecialchars($homeUrl ?? ($appUrl ?: '/')) ?>">Open application</a>
         </p>
     </div>
 <?php endif; ?>

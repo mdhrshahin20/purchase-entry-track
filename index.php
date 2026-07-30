@@ -1,13 +1,16 @@
 <?php
 
 /**
- * Project entry — http://localhost:8888/purchase-entry-track/
+ * Front controller — single entry for the custom MVC app.
+ *
+ * Clean URLs (/report, /purchase/store, /install) are routed here via
+ * Apache FallbackResource / optional mod_rewrite (see .htaccess).
  */
 
 declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
 
-use App\Controllers\PurchaseController;
+use App\Core\Application;
 
-(new PurchaseController())->index();
+Application::run();

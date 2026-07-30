@@ -37,7 +37,7 @@ class Database
     public static function getInstance(): PDO
     {
         if (self::$instance === null) {
-            $config = require dirname(__DIR__, 2) . '/config/database.php';
+            $config = Config::database();
 
             $dsn = sprintf(
                 'mysql:host=%s;port=%s;dbname=%s;charset=%s',
@@ -62,10 +62,10 @@ class Database
                     header('Content-Type: application/json; charset=utf-8');
                     echo json_encode([
                         'success' => false,
-                        'message' => 'Database connection failed. Open /install/ to update credentials.',
+                        'message' => 'Database connection failed. Open /install to update credentials.',
                     ]);
                 } else {
-                    $installUrl = Installer::projectUrl() . '/install/';
+                    $installUrl = rtrim(Url::project(), '/') . '/install';
                     echo 'Database connection failed. ';
                     echo '<a href="' . htmlspecialchars($installUrl) . '">Open the setup wizard</a> to fix credentials.';
                 }
