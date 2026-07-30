@@ -1,9 +1,11 @@
 # =============================================================================
-# ONE project .htaccess — single front controller (index.php)
+# ONE project .htaccess — clean URLs → single front controller
 #
-# Routes live only in routes/web.php. Do NOT add report/, store/, install/ folders.
-# Links use PATH_INFO: /index.php/report (works without rewrite on LiteSpeed).
-# Optional pretty URLs (/report) when rewrite is available.
+# Requires Apache mod_rewrite (enable in MAMP: uncomment LoadModule rewrite_module).
+#
+#   /purchase-entry-track/report
+#   /purchase-entry-track/report/   → 302 → /report (no 500 loop)
+#   POST /purchase-entry-track/store
 # =============================================================================
 
 DirectoryIndex index.php
@@ -24,16 +26,20 @@ Options -Indexes -MultiViews
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Allow /index.php/report (PATH_INFO)
     RewriteRule ^index\.php(?:/.*)?$ - [L]
-
     RewriteRule ^public(/|$) - [L]
 
     RewriteRule ^(app|config|database|routes|tests|vendor)(/|$) - [F,L]
     RewriteRule ^bootstrap\.php$ - [F,L]
 
-    # Optional pretty URLs when the host supports rewrite
+    # Front controller for clean routes (/report, /store, /install, …)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ index.php/$1 [QSA,L]
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Last resort when rewrite module is not loaded (shared hosts / misconfigured MAMP).
+# Do not combine with DirectorySlash tricks that loop on /report/.
+<IfModule !mod_rewrite.c>
+    FallbackResource index.php
 </IfModule>

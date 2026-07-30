@@ -97,36 +97,14 @@ class Url
     }
 
     /**
-     * Front-controller base, e.g. /index.php or /purchase-entry-track/index.php.
-     */
-    public static function frontController(): string
-    {
-        $project = self::project();
-        if ($project !== '' && !self::isSafeUrlPath($project)) {
-            $project = self::projectFromFilesystemFolder();
-        }
-        if ($project === '' || !self::isSafeUrlPath($project)) {
-            $envBase = getenv('APP_BASE_URL');
-            if ($envBase === false && self::looksLikeWindowsDriveLeak()) {
-                $folder = self::projectFromFilesystemFolder();
-                if ($folder !== '') {
-                    return $folder . '/index.php';
-                }
-            }
-            return '/index.php';
-        }
-
-        return $project . '/index.php';
-    }
-
-    /**
-     * Application route URL via the single front controller (PATH_INFO).
+     * Clean application route URL (no index.php in the path).
      *
      * Examples:
-     *   path('/report') → /index.php/report
-     *   path('/store')  → /purchase-entry-track/index.php/store
+     *   path('/report') → /report  or  /purchase-entry-track/report
+     *   path('/store')  → /store   or  /purchase-entry-track/store
      *
-     * No per-route folders. Works on LiteSpeed/cPanel without mod_rewrite.
+     * Routed to the single front controller via .htaccess rewrite.
+     * New routes = routes/web.php only — never add root folders.
      */
     public static function path(string $path = '/'): string
     {
@@ -135,11 +113,27 @@ class Url
             return self::home();
         }
 
-        return self::frontController() . $path;
+        $project = self::project();
+        if ($project !== '' && !self::isSafeUrlPath($project)) {
+            $project = self::projectFromFilesystemFolder();
+        }
+
+        if ($project === '' || !self::isSafeUrlPath($project)) {
+            $envBase = getenv('APP_BASE_URL');
+            if ($envBase === false && self::looksLikeWindowsDriveLeak()) {
+                $folder = self::projectFromFilesystemFolder();
+                if ($folder !== '') {
+                    return $folder . $path;
+                }
+            }
+            return $path;
+        }
+
+        return $project . $path;
     }
 
     /**
-     * Alias of path() for form/AJAX endpoints (same single front controller).
+     * Form/AJAX endpoint URL (same clean path style).
      */
     public static function endpoint(string $route): string
     {

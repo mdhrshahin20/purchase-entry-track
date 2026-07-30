@@ -50,7 +50,7 @@ Request → index.php → Application → routes/web.php → Router → Controll
 - Default Compose copies the app into the image (no bind-mount) so `/Applications/MAMP/...` works without Docker File Sharing. Optional live mount: `docker-compose.dev.yml`.
 - MySQL image is built from `docker/mysql/Dockerfile` with `purchase_entry.sql` baked into `/docker-entrypoint-initdb.d/` (first volume boot only).
 - Entrypoint writes DB credentials to `/var/www/docker-config/database.php` (outside any bind mount). `Config::database()` loads that first so host `config/database.php` is unchanged.
-- App links use one front controller PATH_INFO (`/index.php/report`) — never add `report/` / `store/` root folders.
+- App links use clean URLs (`/report`, `/store`) rewritten to `index.php` — never expose `index.php` in hrefs and never add `report/` / `store/` root folders.
 
 ## Routes (`routes/web.php`)
 
@@ -62,14 +62,14 @@ Request → index.php → Application → routes/web.php → Router → Controll
 | GET | `/report` | `ReportController@index` |
 | GET/POST | `/install` | `InstallController@index` |
 
-URLs (single front controller — **no** `report/` / `store/` folders):
+URLs (clean — **no** `index.php` in the browser path):
 
-- `/purchase-entry-track/` or `/`
-- `/purchase-entry-track/index.php/report`
-- `POST /purchase-entry-track/index.php/store`
-- `/purchase-entry-track/index.php/install`
+- `/purchase-entry-track/`
+- `/purchase-entry-track/report`
+- `POST /purchase-entry-track/store`
+- `/purchase-entry-track/install`
 
-Optional pretty URLs (`/report`) when Apache/LiteSpeed rewrite is enabled.
+`.htaccess` rewrites these to the single front controller. Do **not** add `report/` / `store/` folders.
 
 ## Coding conventions
 

@@ -9,7 +9,7 @@ use App\Core\Url;
 use PHPUnit\Framework\TestCase;
 
 /**
- * URL helpers — Windows/XAMPP quirks + single front-controller PATH_INFO links.
+ * URL helpers — clean paths (no index.php) + Windows/XAMPP safety.
  */
 final class UrlTest extends TestCase
 {
@@ -39,24 +39,24 @@ final class UrlTest extends TestCase
 
     public function testRejectsDriveLetterPaths(): void
     {
-        $this->assertFalse(Url::isSafeUrlPath('D:/xampp/htdocs/purchase-entry-track/index.php'));
         $this->assertFalse(Url::isSafeUrlPath('/D:/xampp/htdocs/purchase-entry-track/index.php'));
-        $this->assertTrue(Url::isSafeUrlPath('/purchase-entry-track/index.php'));
+        $this->assertTrue(Url::isSafeUrlPath('/purchase-entry-track/report'));
     }
 
-    public function testPathsUseSingleFrontController(): void
+    public function testCleanUrlsAtDomainRoot(): void
     {
         putenv('APP_BASE_URL=');
         $_ENV['APP_BASE_URL'] = '';
         $_SERVER['SCRIPT_NAME'] = '/index.php';
         $_SERVER['REQUEST_URI'] = '/';
 
-        $this->assertSame('/index.php/report', Url::path('/report'));
-        $this->assertSame('/index.php/store', Url::endpoint('store'));
         $this->assertSame('/', Url::home());
+        $this->assertSame('/report', Url::path('/report'));
+        $this->assertSame('/store', Url::endpoint('store'));
+        $this->assertStringNotContainsString('index.php', Url::path('/report'));
     }
 
-    public function testSubdirectoryFrontController(): void
+    public function testCleanUrlsInSubdirectory(): void
     {
         putenv('APP_BASE_URL=/purchase-entry-track');
         $_ENV['APP_BASE_URL'] = '/purchase-entry-track';
@@ -64,25 +64,27 @@ final class UrlTest extends TestCase
         $_SERVER['REQUEST_URI'] = '/purchase-entry-track/';
 
         $this->assertSame('/purchase-entry-track', Url::home());
-        $this->assertSame('/purchase-entry-track/index.php/report', Url::path('/report'));
-        $this->assertSame('/purchase-entry-track/index.php/store', Url::endpoint('store'));
+        $this->assertSame('/purchase-entry-track/report', Url::path('/report'));
+        $this->assertSame('/purchase-entry-track/store', Url::endpoint('store'));
+        $this->assertStringNotContainsString('index.php', Url::path('/report'));
     }
 
-    public function testConfiguredBaseUrlWinsOnWindowsLeak(): void
+    public function testWindowsDriveLeakStillYieldsCleanPath(): void
     {
         putenv('APP_BASE_URL=/purchase-entry-track');
         $_ENV['APP_BASE_URL'] = '/purchase-entry-track';
         $_SERVER['SCRIPT_NAME'] = '/D:/xampp/htdocs/purchase-entry-track/index.php';
-        $_SERVER['REQUEST_URI'] = '/D:/xampp/htdocs/purchase-entry-track/';
 
-        $this->assertSame('/purchase-entry-track/index.php/report', Url::path('/report'));
+        $this->assertSame('/purchase-entry-track/report', Url::path('/report'));
     }
 
-    public function testRequestPathFromPathInfo(): void
+    public function testRequestPathFromPrettyUrl(): void
     {
-        $_SERVER['PATH_INFO'] = '/report';
+        unset($_SERVER['PATH_INFO']);
+        putenv('APP_BASE_URL=/purchase-entry-track');
+        $_ENV['APP_BASE_URL'] = '/purchase-entry-track';
         $_SERVER['SCRIPT_NAME'] = '/purchase-entry-track/index.php';
-        $_SERVER['REQUEST_URI'] = '/purchase-entry-track/index.php/report';
+        $_SERVER['REQUEST_URI'] = '/purchase-entry-track/report';
 
         $this->assertSame('/report', Url::requestPath());
     }

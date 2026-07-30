@@ -319,7 +319,8 @@ If you never run `composer install`, the project still runs normally in the brow
 
 | Problem | Fix |
 |---------|-----|
-| 403 Forbidden on `/purchase-entry-track` (no slash) | Fixed in `.htaccess` (`DirectorySlash On`). Hard-refresh or try Incognito. Prefer `http://localhost:8888/purchase-entry-track/` |
+| 500 on `/report/` (trailing slash) | Fixed: app redirects `/report/` → `/report`. Also enable **mod_rewrite** in MAMP (`LoadModule rewrite_module` in `httpd.conf`) then restart Apache |
+| Clean URLs 404 but `/index.php` works | `mod_rewrite` is disabled. Uncomment `LoadModule rewrite_module modules/mod_rewrite.so` in MAMP Apache config and restart |
 | 403 Forbidden on `/purchase-entry-track/` | Ensure latest `.htaccess` (do not blanket-deny all `*.php`). Restart Apache in MAMP if needed |
 | Docker: mounts denied / `/Applications/...` not shared | Default Compose no longer bind-mounts the project. Run `docker compose down && docker compose up --build`. Or add `/Applications` under Docker Desktop → File Sharing |
 | Docker: port 8080 in use | Set `APP_PORT=8081` in `.env` and re-run `docker compose up` |

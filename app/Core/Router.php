@@ -75,6 +75,11 @@ class Router
             $method = 'GET';
         }
 
+        // Canonicalize /report/ → /report (avoids Apache rewrite/FallbackResource 500 loops)
+        if ($this->redirectTrailingSlash($uri)) {
+            return;
+        }
+
         $path = $this->resolvePath($uri);
         $handler = $this->routes[$method][$path] ?? null;
 
@@ -87,6 +92,31 @@ class Router
         [$class, $action] = $handler;
         $controller = new $class();
         $controller->$action();
+    }
+
+    /**
+     * Externally redirect .../report/ → .../report (keep query string).
+     */
+    private function redirectTrailingSlash(string $uri): bool
+    {
+        $parts = parse_url($uri);
+        $path = isset($parts['path']) ? str_replace('\\', '/', (string) $parts['path']) : '';
+        if ($path === '' || $path === '/' || !str_ends_with($path, '/')) {
+            return false;
+        }
+
+        // Only canonicalize known app routes (and nested under project folder).
+        if (!preg_match('#/(report|store|install)/$#', $path)) {
+            return false;
+        }
+
+        $target = rtrim($path, '/');
+        if (!empty($parts['query'])) {
+            $target .= '?' . $parts['query'];
+        }
+
+        header('Location: ' . $target, true, 302);
+        return true;
     }
 
     /**
