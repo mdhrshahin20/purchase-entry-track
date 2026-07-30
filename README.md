@@ -64,7 +64,7 @@ Or keep it in MAMP and add **`/Applications`** in Docker Desktop → Settings �
 |-------------|-------------------|
 | PHP | **7.4+** (8.0–8.4 recommended). PHP 8 string helpers are polyfilled for 7.4 |
 | MySQL / MariaDB | 5.7+ / 10.3+ |
-| Apache | PHP module or PHP-FPM. `mod_rewrite` is **optional** |
+| Apache / LiteSpeed | PHP module or PHP-FPM. `mod_rewrite` optional (PATH_INFO works without it) |
 | Stack | XAMPP, WAMP, LAMP, **MAMP**, or **Docker** |
 | Browser | Any modern browser |
 | Composer | **Not required** for the app. Optional for unit tests / code style only |

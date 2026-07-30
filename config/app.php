@@ -13,7 +13,23 @@ return [
     // Cookie that blocks repeat submissions for 24 hours
     'submit_cookie_name' => 'purchase_submitted',
     'submit_cookie_ttl' => 86400, // 24 hours in seconds
-    // Subfolder (MAMP/XAMPP: /purchase-entry-track) → set as below.
-    // Docker overrides with APP_BASE_URL="" via entrypoint.
-    'base_url' => '/purchase-entry-track',
+
+    /**
+     * Web base path — leave EMPTY for automatic detection (recommended).
+     *
+     * Auto examples:
+     *   https://example.com/              → ""
+     *   https://example.com/purchase-entry-track/ → "/purchase-entry-track"
+     *   http://localhost:8888/purchase-entry-track/ → "/purchase-entry-track"
+     *
+     * Only set manually if auto-detect fails, e.g. 'base_url' => '/purchase-entry-track'
+     */
+    'base_url' => '',
+
+    /**
+     * false = /index.php/report (works on LiteSpeed without rewrite).
+     * true  = /report (needs .htaccess rewrite).
+     * Do not add report/store folders.
+     */
+    'pretty_urls' => false,
 ];

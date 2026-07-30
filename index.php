@@ -3,8 +3,8 @@
 /**
  * Front controller — single entry for the custom MVC app.
  *
- * Clean URLs (/report, /purchase/store, /install) are routed here via
- * Apache FallbackResource / optional mod_rewrite (see .htaccess).
+ * Clean URLs (/report, /store) are rewritten here by .htaccess, or via
+ * ErrorDocument 404 → index.php when the host ignores rewrite (some LiteSpeed).
  */
 
 declare(strict_types=1);

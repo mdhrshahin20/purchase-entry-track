@@ -15,33 +15,45 @@ class Url
 {
     /**
      * Project web root URL (no trailing slash), e.g. /purchase-entry-track.
-     * Empty string means the app is mounted at the domain root (Docker).
+     * Empty string = app is at the domain root (https://example.com/).
+     *
+     * Detection order (global / portable):
+     * 1. APP_BASE_URL env (Docker)
+     * 2. config base_url when non-empty (manual override only)
+     * 3. SCRIPT_NAME / DOCUMENT_ROOT (Apache / LiteSpeed / PHP)
+     * 4. REQUEST_URI first folder
+     * 5. Project folder name on disk (Windows XAMPP drive-letter fallback)
      */
     public static function project(): string
     {
-        // Docker sets APP_BASE_URL="" (domain root). Host stacks use config/app.php base_url.
+        // 1) Explicit env (Docker / hosting panel)
         $envBase = getenv('APP_BASE_URL');
+        if ($envBase === false && isset($_SERVER['APP_BASE_URL'])) {
+            $envBase = (string) $_SERVER['APP_BASE_URL'];
+        }
         if ($envBase !== false) {
-            $configured = self::normalizeSlashes(trim($envBase));
+            $configured = self::normalizeSlashes(trim((string) $envBase));
             if ($configured === '' || $configured === '/') {
                 return '';
             }
             if (self::isSafeUrlPath($configured)) {
                 return rtrim($configured, '/');
             }
-        } else {
-            $configured = trim((string) Config::app('base_url', ''));
-            if ($configured !== '') {
-                $configured = self::normalizeSlashes($configured);
-                if ($configured === '/') {
-                    return '';
-                }
-                if (self::isSafeUrlPath($configured)) {
-                    return rtrim($configured, '/');
-                }
+        }
+
+        // 2) Manual override in config/app.php (only when non-empty)
+        $configured = trim((string) Config::app('base_url', ''));
+        if ($configured !== '') {
+            $configured = self::normalizeSlashes($configured);
+            if ($configured === '/') {
+                return '';
+            }
+            if (self::isSafeUrlPath($configured)) {
+                return rtrim($configured, '/');
             }
         }
 
+        // 3) Front-controller location
         $script = self::scriptUrlPath();
         $dir = self::normalizeSlashes(dirname($script));
 
@@ -57,11 +69,13 @@ class Url
             return rtrim($dir, '/');
         }
 
+        // 4) REQUEST_URI
         $fromUri = self::projectFromRequestUri();
         if ($fromUri !== '') {
             return $fromUri;
         }
 
+        // 5) Folder name on disk (Windows SCRIPT_NAME = /D:/…)
         return self::projectFromFilesystemFolder();
     }
 
@@ -97,14 +111,46 @@ class Url
     }
 
     /**
-     * Clean application route URL (no index.php in the path).
+     * Front controller script URL, e.g. /index.php or /purchase-entry-track/index.php.
+     */
+    public static function frontController(): string
+    {
+        $project = self::project();
+
+        if ($project === '') {
+            return '/index.php';
+        }
+
+        if (!self::isSafeUrlPath($project)) {
+            $folder = self::projectFromFilesystemFolder();
+            if ($folder !== '' && self::isSafeUrlPath($folder)) {
+                return $folder . '/index.php';
+            }
+            return '/index.php';
+        }
+
+        return $project . '/index.php';
+    }
+
+    /**
+     * Whether links omit index.php (/report vs /index.php/report).
+     * Default false so hosts without rewrite (e.g. LiteSpeed) still work.
+     */
+    public static function prettyUrls(): bool
+    {
+        return (bool) Config::app('pretty_urls', false);
+    }
+
+    /**
+     * Application route URL.
      *
-     * Examples:
-     *   path('/report') → /report  or  /purchase-entry-track/report
-     *   path('/store')  → /store   or  /purchase-entry-track/store
+     * Default (pretty_urls=false):
+     *   path('/report') → /index.php/report
      *
-     * Routed to the single front controller via .htaccess rewrite.
-     * New routes = routes/web.php only — never add root folders.
+     * Optional (pretty_urls=true, needs rewrite):
+     *   path('/report') → /report
+     *
+     * Never add report/store folders. Routes stay in routes/web.php.
      */
     public static function path(string $path = '/'): string
     {
@@ -113,18 +159,20 @@ class Url
             return self::home();
         }
 
-        $project = self::project();
-        if ($project !== '' && !self::isSafeUrlPath($project)) {
-            $project = self::projectFromFilesystemFolder();
+        if (!self::prettyUrls()) {
+            return self::frontController() . $path;
         }
 
-        if ($project === '' || !self::isSafeUrlPath($project)) {
-            $envBase = getenv('APP_BASE_URL');
-            if ($envBase === false && self::looksLikeWindowsDriveLeak()) {
-                $folder = self::projectFromFilesystemFolder();
-                if ($folder !== '') {
-                    return $folder . $path;
-                }
+        $project = self::project();
+
+        if ($project === '') {
+            return $path;
+        }
+
+        if (!self::isSafeUrlPath($project)) {
+            $folder = self::projectFromFilesystemFolder();
+            if ($folder !== '' && self::isSafeUrlPath($folder)) {
+                return $folder . $path;
             }
             return $path;
         }
@@ -151,13 +199,20 @@ class Url
     public static function assets(): string
     {
         $project = self::project();
-        if ($project !== '' && !self::isSafeUrlPath($project)) {
-            $project = self::projectFromFilesystemFolder();
+
+        if ($project === '') {
+            return '/public';
         }
-        if ($project === '' && self::looksLikeWindowsDriveLeak()) {
-            $project = self::projectFromFilesystemFolder();
+
+        if (!self::isSafeUrlPath($project)) {
+            $folder = self::projectFromFilesystemFolder();
+            if ($folder !== '' && self::isSafeUrlPath($folder)) {
+                return $folder . '/public';
+            }
+            return '/public';
         }
-        return ($project === '' || !self::isSafeUrlPath($project)) ? '/public' : $project . '/public';
+
+        return $project . '/public';
     }
 
     /**
