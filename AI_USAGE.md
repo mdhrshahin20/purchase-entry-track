@@ -4,22 +4,49 @@ This project was built with AI coding assistance (Cursor) under human direction.
 
 ## What AI was used for
 
-1. **Laravel-inspired architecture** — `Foundation` (Application/Container/Request/Response/Router), `Http` (Controllers, Middleware, FormRequests), `Services`, `routes/web.php`, `bootstrap/`, and `resources/views` — without installing Laravel.
-2. **Scaffolding** — purchase store flow, report filters + pagination, dual validation, cookie lock.
-3. **SQL + seed data** — schema and sample rows with matching SHA-512 `hash_key` values.
-4. **Documentation** — README, CLAUDE.md, and this file.
+1. **Custom MVC scaffolding** — `app/Controllers`, `app/Models`, `app/Views`, and `app/Core` (Router, Database, Validator, Csrf) without installing Laravel or any application framework.
+2. **Validation parity** — matching frontend (jQuery) and backend (`Validator`) rules from the assignment brief.
+3. **Security** — CSRF session tokens, 24-hour submit cookie, server-only `buyer_ip` / `hash_key` / `entry_at`.
+4. **Report features** — date/user filters, pagination, per-page size (bottom only), serial `#`, Details accordion on the right.
+5. **SQL + seed data** — schema matching required columns and five sample rows with consistent SHA-512 `hash_key` values.
+6. **Quality tooling** — PHPUnit unit tests, PHPCS (PSR-12), PHPDoc on Core/Controllers/Models; Composer used only as optional dev tooling.
+7. **Documentation** — README installation guide, CLAUDE.md agent context, and this file.
+8. **Form UX** — realtime field validation and a clear error summary on submit.
+
+Human decisions included: treating `receipt_id` as letters-only; storing multiple items as a comma-separated `varchar`; default timezone `Asia/Dhaka`; credentials only in `config/database.php`; and keeping a **classic MVC** layout (not a Laravel-lookalike) so the submission matches “your own MVC / no framework.”
+
 ## One prompt / approach that worked well
 
-Giving the agent the **full assignment text** and asking it to implement against an explicit checklist (MVC + PDO, dual validation, cookie lock, server-only IP/hash/date, report filters, SQL seed, README/CLAUDE/AI_USAGE) produced a coherent first pass instead of piecemeal files that disagreed on field rules.
+Providing the **full assignment text** and asking for implementation against an explicit checklist (MVC + PDO, dual validation, cookie lock, CSRF, server-only IP/hash/date, report filters, SQL seed, README / CLAUDE / AI_USAGE) produced a coherent first pass instead of piecemeal files with drifting field rules.
 
-A useful follow-up pattern was: *“Align JS and PHP validators field-by-field with the brief; phone must prepend 880 in JS and be enforced on the server.”* That kept the two layers from drifting.
+A useful follow-up: *“Align JS and PHP validators field-by-field; phone must prepend 880 in JS and be enforced on the server.”*
 
 ## Where AI was wrong or suboptimal — and how it was fixed
 
-**Issue 1 — `mod_rewrite` assumed always on:** The first `.htaccess` used bare `RewriteEngine On`. On this MAMP install `mod_rewrite` is not loaded, so Apache returned **500** for every request under `public/` (including `index.php`).
+**Issue 1 — `mod_rewrite` assumed always on**  
+Bare `RewriteEngine On` caused HTTP 500 on MAMP builds without rewrite; MAMP often ships with `mod_rewrite` commented out, so `/report` via `.htaccess` never matched.  
+**Fix:** Folder entry points (`report/index.php`, `purchase/store/index.php`) for clean URLs without rewrite, plus `IfModule` wrappers where rewrite is optional.
 
-**How it was caught:** Hitting `http://localhost:8888/purchase-entry-track/public/` and reading `apache_error.log` (`Invalid command 'RewriteEngine'`).
+**Issue 2 — overly framework-like folders**  
+An intermediate layout mimicked Laravel (`Http/`, FormRequest, container, `routes/web.php`). Still not Laravel, but risky for a “no framework” brief.  
+**Fix:** Restructured to classic **Controllers / Models / Views / Core**.
 
-**Fix:** Wrap rewrite rules in `<IfModule mod_rewrite.c>`, route via **PATH_INFO** (`/public/index.php/report`), and generate links with `appUrl` pointing at `index.php` so the project runs without rewrite. Document both URL styles in the README.
+**Issue 3 — seed `hash_key` drift**  
+Seed hashes must match `hash('sha512', receipt_id . salt)`.  
+**Fix:** Recomputed with a PHP one-liner and pasted into the SQL.
 
-**Issue 2 — seed `hash_key` consistency:** Seed hashes must match `hash('sha512', receipt_id . salt)` from `config/app.php`. Values were recomputed with a PHP one-liner and pasted into the SQL so report seed data stays consistent with runtime hashing.
+**Issue 4 — report “Per page” placement**  
+An early UI put per-page controls at top and bottom; the product preference was bottom only.  
+**Fix:** Single **Per page** control in the bottom pagination bar.
+
+**Issue 5 — Details column placement**  
+First pass put the Details toggle on the left of the table.  
+**Fix:** Moved serial `#` to the left and Details to the right (standard list + actions layout), with accordion UX in `report.js`.
+
+## What was verified locally
+
+- Form and report load on MAMP (`localhost:8888`)
+- AJAX store with CSRF; reject without token
+- Backend validation when JS is bypassed
+- Cookie blocks second submit within 24 hours
+- `composer test` (21 tests) and `composer phpcs` (PSR-12) pass after `composer install`

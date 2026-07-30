@@ -1,13 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
-use App\Foundation\Model;
+use App\Core\Model;
 use PDO;
 
+/**
+ * Purchase persistence layer — all SQL uses prepared statements.
+ */
 class Purchase extends Model
 {
     /**
+     * Insert a new purchase row and return its primary key.
+     *
      * @param array{
      *   amount:int|string,
      *   buyer:string,
@@ -21,14 +28,18 @@ class Purchase extends Model
      *   hash_key:string,
      *   entry_at:string,
      *   entry_by:int|string
-     * } $data
+     * } $data Column values to insert.
+     *
+     * @return int New row id.
      */
     public function create(array $data): int
     {
         $sql = 'INSERT INTO purchases
-            (amount, buyer, receipt_id, items, buyer_email, buyer_ip, note, city, phone, hash_key, entry_at, entry_by)
+            (amount, buyer, receipt_id, items, buyer_email, buyer_ip,
+             note, city, phone, hash_key, entry_at, entry_by)
             VALUES
-            (:amount, :buyer, :receipt_id, :items, :buyer_email, :buyer_ip, :note, :city, :phone, :hash_key, :entry_at, :entry_by)';
+            (:amount, :buyer, :receipt_id, :items, :buyer_email, :buyer_ip,
+             :note, :city, :phone, :hash_key, :entry_at, :entry_by)';
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
@@ -49,7 +60,13 @@ class Purchase extends Model
         return (int) $this->db->lastInsertId();
     }
 
-    /** @param array{date_from?:string, date_to?:string, entry_by?:string} $filters */
+    /**
+     * Count purchases matching optional report filters.
+     *
+     * @param array{date_from?:string, date_to?:string, entry_by?:string} $filters
+     *
+     * @return int
+     */
     public function countFiltered(array $filters = []): int
     {
         [$where, $params] = $this->buildFilterClause($filters);
@@ -60,15 +77,20 @@ class Purchase extends Model
     }
 
     /**
+     * Fetch purchases matching filters with optional pagination.
+     *
      * @param array{date_from?:string, date_to?:string, entry_by?:string} $filters
+     * @param int|null                                                     $limit   Page size, or null for all.
+     * @param int                                                          $offset  Row offset.
+     *
      * @return list<array<string, mixed>>
      */
     public function findFiltered(array $filters = [], ?int $limit = null, int $offset = 0): array
     {
         [$where, $params] = $this->buildFilterClause($filters);
 
-        $sql = 'SELECT id, amount, buyer, receipt_id, items, buyer_email, buyer_ip,
-                       note, city, phone, hash_key, entry_at, entry_by
+        $sql = 'SELECT id, amount, buyer, receipt_id, items, buyer_email,
+                       note, city, phone, entry_at, entry_by, buyer_ip
                 FROM purchases WHERE 1=1' . $where . '
                 ORDER BY entry_at DESC, id DESC';
 
@@ -90,7 +112,12 @@ class Purchase extends Model
     }
 
     /**
+     * Build a WHERE clause fragment and bound parameters for filters.
+     *
+     * Only static SQL fragments are concatenated; user values are bound.
+     *
      * @param array{date_from?:string, date_to?:string, entry_by?:string} $filters
+     *
      * @return array{0: string, 1: array<string, mixed>}
      */
     private function buildFilterClause(array $filters): array

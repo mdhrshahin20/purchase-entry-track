@@ -4,6 +4,7 @@
  * Application configuration.
  * Adjust timezone and salt if needed; database credentials live in database.php.
  */
+
 return [
     'name' => 'Purchase Entry & Reporting',
     'timezone' => 'Asia/Dhaka',

@@ -7,8 +7,10 @@
 
     var items = [];
     var base = window.APP_BASE || '';
+    var storeUrl = window.APP_STORE_URL || (base + '/purchase/store/');
     var submittedOnce = false;
     var touched = {};
+    var lockTimer = null;
 
     var fieldOrder = [
         'amount',
@@ -21,6 +23,106 @@
         'phone',
         'entry_by'
     ];
+
+    function formatRemaining(seconds) {
+        seconds = Math.max(0, Math.floor(seconds));
+        var hours = Math.floor(seconds / 3600);
+        var minutes = Math.floor((seconds % 3600) / 60);
+        var secs = seconds % 60;
+        if (hours > 0 && minutes > 0) {
+            return hours + 'h ' + minutes + 'm';
+        }
+        if (hours > 0) {
+            return hours + ' hour' + (hours === 1 ? '' : 's');
+        }
+        if (minutes > 0) {
+            return minutes + ' minute' + (minutes === 1 ? '' : 's');
+        }
+        return secs + ' second' + (secs === 1 ? '' : 's');
+    }
+
+    function formatAvailableLabel(iso) {
+        if (!iso) {
+            return '';
+        }
+        var date = new Date(iso);
+        if (isNaN(date.getTime())) {
+            return iso;
+        }
+        try {
+            var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            var month = months[date.getMonth()];
+            var day = date.getDate();
+            var year = date.getFullYear();
+            var hours = date.getHours();
+            var minutes = date.getMinutes();
+            var ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            if (hours === 0) {
+                hours = 12;
+            }
+            var min = minutes < 10 ? '0' + minutes : String(minutes);
+            return month + ' ' + day + ', ' + year + ' at ' + hours + ':' + min + ' ' + ampm;
+        } catch (e) {
+            return date.toString();
+        }
+    }
+
+    function showSubmitLock(lock) {
+        var $banner = $('#submit-lock-banner');
+        if (!$banner.length || !lock || !lock.locked) {
+            return;
+        }
+
+        var availableLabel = lock.available_at_label || formatAvailableLabel(lock.available_at);
+        var remainingLabel = lock.remaining_label || formatRemaining(lock.remaining_seconds || 0);
+        var html = '<strong>Warning</strong><p class="submit-lock-copy">Next submission available after <strong id="submit-lock-available">' +
+            $('<div>').text(availableLabel).html() +
+            '</strong> <span id="submit-lock-remaining-wrap">(<span id="submit-lock-remaining">' +
+            $('<div>').text(remainingLabel).html() +
+            '</span> left)</span>.</p>';
+
+        $banner
+            .html(html)
+            .attr('data-available-at', lock.available_at || '')
+            .attr('data-remaining-seconds', lock.remaining_seconds != null ? lock.remaining_seconds : '')
+            .prop('hidden', false);
+
+        startLockCountdown(lock);
+    }
+
+    function startLockCountdown(lock) {
+        if (lockTimer) {
+            clearInterval(lockTimer);
+            lockTimer = null;
+        }
+        if (!lock || !lock.available_at) {
+            return;
+        }
+
+        var unlockAt = Date.parse(lock.available_at);
+        if (isNaN(unlockAt)) {
+            return;
+        }
+
+        function tick() {
+            var remaining = Math.max(0, Math.floor((unlockAt - Date.now()) / 1000));
+            var $remaining = $('#submit-lock-remaining');
+            if ($remaining.length) {
+                $remaining.text(formatRemaining(remaining));
+            }
+            if (remaining <= 0) {
+                clearInterval(lockTimer);
+                lockTimer = null;
+                $('#submit-lock-banner')
+                    .html('<strong>Warning</strong><p class="submit-lock-copy">You can submit again now.</p>')
+                    .prop('hidden', false);
+            }
+        }
+
+        tick();
+        lockTimer = setInterval(tick, 1000);
+    }
 
     function showAlert(type, message, details) {
         var $alert = $('#form-alert');
@@ -142,19 +244,80 @@
         });
     }
 
+    var NOTE_MAX_WORDS = 30;
+    /** Last note value that stayed within the 30-word limit. */
+    var lastValidNote = '';
+
+    /**
+     * Count words as letter/number groups (Unicode-aware).
+     * Updates as soon as you type characters — not only when you press space.
+     */
     function countWords(text) {
-        var trimmed = $.trim(text);
-        if (!trimmed) {
+        var value = String(text || '');
+        if (!value) {
             return 0;
         }
-        return trimmed.split(/\s+/).filter(Boolean).length;
+
+        var matches = null;
+        try {
+            // Letters or numbers in any language (e.g. English, Bangla).
+            matches = value.match(/[\p{L}\p{N}]+/gu);
+        } catch (e) {
+            matches = null;
+        }
+
+        if (!matches) {
+            // Fallback: any non-whitespace run.
+            matches = value.match(/[^\s]+/g);
+        }
+
+        return matches ? matches.length : 0;
     }
 
     function updateWordCount() {
-        var count = countWords($('#note').val());
+        var $note = $('#note');
+        if (!$note.length) {
+            return;
+        }
+
+        var count = countWords($note.val());
+        var $wrap = $('#note-word-wrap');
         var $meta = $('#note-words');
-        $meta.text(count);
-        $('#note-word-wrap').toggleClass('is-over', count > 30);
+
+        if ($meta.length) {
+            $meta.text(String(count));
+        } else if ($wrap.length) {
+            $wrap.html('<span id="note-words">' + count + '</span> / 30 words');
+        }
+
+        $wrap.toggleClass('is-over', count >= NOTE_MAX_WORDS);
+        $wrap.attr('data-count', String(count));
+    }
+
+    /**
+     * Keep note at max 30 words — block extra typing/paste and show a warning.
+     */
+    function enforceNoteWordLimit() {
+        var $note = $('#note');
+        if (!$note.length) {
+            return;
+        }
+
+        var value = $note.val();
+        var count = countWords(value);
+
+        if (count <= NOTE_MAX_WORDS) {
+            lastValidNote = value;
+            updateWordCount();
+            if ($('[data-error="note"]').text().indexOf('30 words only') !== -1) {
+                clearFieldError('note');
+            }
+            return;
+        }
+
+        $note.val(lastValidNote);
+        updateWordCount();
+        setFieldError('note', 'You can use up to 30 words only. Extra text was blocked.');
     }
 
     function addItem() {
@@ -223,7 +386,7 @@
                 return null;
             case 'note':
                 if (!note) return 'Note is required.';
-                if (countWords(note) > 30) return 'Note must be no more than 30 words.';
+                if (countWords(note) > NOTE_MAX_WORDS) return 'Note must be no more than 30 words.';
                 return null;
             case 'city':
                 if (!city) return 'City is required.';
@@ -375,8 +538,9 @@
             }
         });
 
-        $('#note').on('input', function () {
-            updateWordCount();
+        $('#note').on('input keyup cut compositionend', function () {
+            enforceNoteWordLimit();
+
             if (submittedOnce || touched.note) {
                 touched.note = true;
                 validateField('note');
@@ -384,7 +548,51 @@
             }
         });
 
-        $('#phone').on('input', function () {
+        $('#note').on('paste', function () {
+            window.setTimeout(function () {
+                enforceNoteWordLimit();
+                if (submittedOnce || touched.note) {
+                    touched.note = true;
+                    validateField('note');
+                    refreshAlertFromFields();
+                }
+            }, 0);
+        });
+
+        // Block starting a 31st word; still allow editing within the existing 30.
+        $('#note').on('keydown', function (e) {
+            var value = $(this).val();
+            if (countWords(value) < NOTE_MAX_WORDS) {
+                return;
+            }
+
+            var allowed = [
+                'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                'Home', 'End', 'Tab', 'Escape', 'Shift', 'Control', 'Meta', 'Alt', 'Enter'
+            ];
+            if (allowed.indexOf(e.key) !== -1 || e.ctrlKey || e.metaKey || e.altKey) {
+                return;
+            }
+
+            var pos = this.selectionStart || 0;
+            var before = value.slice(0, pos);
+            var startingNewWord = e.key === ' ' || (e.key.length === 1 && /\s$/.test(before));
+
+            if (startingNewWord) {
+                e.preventDefault();
+                setFieldError('note', 'You can use up to 30 words only. Extra text was blocked.');
+                updateWordCount();
+            }
+        });
+
+        $('#note').on('blur', function () {
+            touched.note = true;
+            enforceNoteWordLimit();
+            validateField('note');
+            if (submittedOnce) {
+                refreshAlertFromFields();
+            }
+        });        $('#phone').on('input', function () {
             this.value = this.value.replace(/\D/g, '');
         });
 
@@ -396,7 +604,6 @@
         bindRealtime('buyer', $('#buyer'));
         bindRealtime('receipt_id', $('#receipt_id'));
         bindRealtime('buyer_email', $('#buyer_email'));
-        bindRealtime('note', $('#note'));
         bindRealtime('city', $('#city'));
         bindRealtime('phone', $('#phone'));
         bindRealtime('entry_by', $('#entry_by'));
@@ -410,6 +617,7 @@
             items = [];
             submittedOnce = false;
             touched = {};
+            lastValidNote = '';
             syncItemsField();
             clearFieldErrors();
             clearAlert();
@@ -456,7 +664,7 @@
             var $btn = $('#submit-btn').prop('disabled', true).text('Submitting…');
 
             $.ajax({
-                url: base + '/purchase/store',
+                url: storeUrl,
                 method: 'POST',
                 data: payload,
                 dataType: 'json',
@@ -472,18 +680,26 @@
                         $('#purchase-form')[0].reset();
                         $('input[name="_token"]').val(token);
                         items = [];
+                        lastValidNote = '';
                         submittedOnce = false;
                         touched = {};
                         syncItemsField();
                         updateWordCount();
                         clearFieldErrors();
+                        if (res.submit_lock) {
+                            showSubmitLock(res.submit_lock);
+                        }
                         $('#form-alert')[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
                     } else {
                         applyServerErrors(res);
                     }
                 })
                 .fail(function (xhr) {
-                    applyServerErrors(xhr.responseJSON);
+                    var res = xhr.responseJSON;
+                    applyServerErrors(res);
+                    if (res && res.submit_lock) {
+                        showSubmitLock(res.submit_lock);
+                    }
                 })
                 .always(function () {
                     $btn.prop('disabled', false).text('Submit Purchase');
@@ -518,6 +734,10 @@
                 return;
             }
             focusFirstError();
+        }
+
+        if (window.SUBMIT_LOCK && window.SUBMIT_LOCK.locked) {
+            startLockCountdown(window.SUBMIT_LOCK);
         }
 
         syncItemsField();

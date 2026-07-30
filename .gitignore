@@ -3,3 +3,6 @@
 *.zip
 .DS_Store
 *.log
+/vendor/
+/.phpunit.cache/
+/config/installed.lock

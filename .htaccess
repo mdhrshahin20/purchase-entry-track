@@ -1,7 +1,10 @@
-# Optional: redirect into /public when the project folder is the vhost root.
-# Safe when mod_rewrite is unavailable (commands are skipped).
+# Prefer DirectoryIndex for clean folder URLs (works without mod_rewrite).
+DirectoryIndex index.php
+
+# Optional: if the host enables mod_rewrite, keep assets public and
+# deny raw access to source folders (also enforced by per-folder .htaccess).
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^$ public/ [L]
-    RewriteRule (.*) public/$1 [L]
+    RewriteRule ^(public)(/|$) - [L]
+    RewriteRule ^(app|config|database|tests|vendor|bootstrap\.php)(/|$) - [F,L]
 </IfModule>

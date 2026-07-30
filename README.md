@@ -1,17 +1,37 @@
 # Purchase Entry & Reporting System
 
-Plain PHP (custom MVC) + MySQL + jQuery purchase-receipt entry and reporting tool. No Laravel/CodeIgniter or other PHP frameworks.
+Plain PHP **custom MVC** + MySQL + jQuery purchase-receipt entry and reporting tool.  
+**No** Laravel, CodeIgniter, or other PHP frameworks.
+
+**You do not need Composer to run this project.** Unzip → start Apache/MySQL → open the site → finish the **browser setup wizard**.  
+`composer install` is **optional** and only needed if you want to run PHPUnit / PHPCS.
+
+---
 
 ## Prerequisites
 
 | Requirement | Suggested version |
 |-------------|-------------------|
-| PHP | 8.0+ (tested with 8.1–8.4; needs `str_starts_with`) |
+| PHP | **7.4+** (8.0–8.4 recommended). PHP 8 string helpers are polyfilled for 7.4 |
 | MySQL / MariaDB | 5.7+ / 10.3+ |
-| Apache | Any recent Apache (PHP module or PHP-FPM). `mod_rewrite` is **optional** |
+| Apache | PHP module or PHP-FPM. `mod_rewrite` is **optional** |
 | Stack | XAMPP, WAMP, LAMP, or **MAMP** |
+| Browser | Any modern browser |
+| Composer | **Not required** for the app. Optional for unit tests / code style only |
 
-Also needed: a browser and (optionally) phpMyAdmin to import the SQL file.
+---
+
+## Quick start (no Composer)
+
+1. Place the folder in your web root (step 1 below).
+2. Start Apache + MySQL (step 2).
+3. Open `http://localhost:8888/purchase-entry-track/` — you are redirected to the **Setup** page.
+4. Click **MAMP** or **XAMPP / WAMP** to auto-fill defaults (or type your own), keep “import SQL” checked, click **Save & install**.
+5. Click **Open application** and use the form / report.
+
+No PHP file editing is required for database credentials. Skip Composer unless you want tests.
+
+---
 
 ## 1. Place the project files
 
@@ -25,90 +45,115 @@ Copy the project folder into your web server document root:
 | **WAMP** | `C:\wamp64\www\` |
 | **LAMP** | `/var/www/html/` |
 
-Final path example (MAMP):
+Example (MAMP):
 
 ```text
 /Applications/MAMP/htdocs/purchase-entry-track/
 ```
 
+---
+
 ## 2. Start Apache and MySQL
 
-Start Apache and MySQL from your stack’s control panel (MAMP / XAMPP / WAMP).
+Start Apache and MySQL from your stack’s control panel.
 
-**MAMP notes**
+**MAMP**
 
-- Default Apache port is often **8888**.
-- Default MySQL port is often **8889**.
-- Default MySQL user/password is often `root` / `root`.
+- Apache port often **8888**
+- MySQL port often **8889**
+- User / password often `root` / `root`
 
-**XAMPP / WAMP notes**
+**XAMPP / WAMP**
 
-- Apache is usually port **80**.
-- MySQL is usually port **3306**.
-- MySQL user is usually `root` with an **empty** password.
+- Apache often port **80**
+- MySQL often port **3306**
+- User `root`, password usually **empty**
 
-## 3. Import the database
+---
 
-Import `database/purchase_entry.sql`. This creates the `purchase_entry` database, the `purchases` table, and five sample rows.
+## 3. Run the setup wizard (recommended)
 
-### Option A — phpMyAdmin
+Open the project URL (or go straight to setup):
 
-1. Open phpMyAdmin (MAMP: `http://localhost:8888/phpMyAdmin/`).
-2. Click **Import**.
-3. Choose `database/purchase_entry.sql`.
-4. Click **Go**.
+| Stack | Setup URL |
+|-------|-----------|
+| MAMP (8888) | http://localhost:8888/purchase-entry-track/install/ |
+| Apache :80 | http://localhost/purchase-entry-track/install/ |
 
-### Option B — MySQL CLI (MAMP example)
+Until setup finishes, visiting the home page automatically redirects here.
+
+On the form:
+
+1. Choose **MAMP** or **XAMPP / WAMP** quick-fill (or enter host/port/user/password yourself).
+2. Leave **Create database and import …purchase_entry.sql** checked.
+3. Click **Save & install**.
+4. Click **Open application**.
+
+The wizard will:
+
+- Create the MySQL database if it does not exist
+- Import the schema + 5 sample rows
+- Write `config/database.php`
+- Create `config/installed.lock` so setup is not required again
+
+### Re-run setup later
+
+Delete `config/installed.lock`, then open `/install/` again (optional **Force reinstall**).
+
+Ensure the web server can write inside `config/` (normal for local MAMP/XAMPP).
+
+### Optional: manual SQL / config (advanced)
+
+If you prefer not to use the wizard:
+
+1. Import `database/purchase_entry.sql` via phpMyAdmin or the MySQL CLI.
+2. Edit `config/database.php` credentials by hand.
+3. Create an empty file `config/installed.lock` (or run the wizard once with import unchecked).
+
+CLI import examples:
 
 ```bash
-/Applications/MAMP/Library/bin/mysql -u root -proot < /Applications/MAMP/htdocs/purchase-entry-track/database/purchase_entry.sql
+# MAMP
+/Applications/MAMP/Library/bin/mysql -u root -proot < database/purchase_entry.sql
+
+# XAMPP / port 3306
+mysql -u root < database/purchase_entry.sql
 ```
 
-### Option C — MySQL CLI (XAMPP / default port 3306)
+---
 
-```bash
-mysql -u root < /path/to/purchase-entry-track/database/purchase_entry.sql
-```
+## 4. Optional app settings
 
-## 4. Configure database credentials
+Timezone, hash salt, and the 24h submit cookie live in `config/app.php` (defaults are fine for local review).
 
-Edit **only** `config/database.php` if your MySQL settings differ from the defaults:
-
-```php
-return [
-    'host' => '127.0.0.1',
-    'port' => '8889',      // MAMP default; use 3306 for XAMPP/WAMP/LAMP
-    'dbname' => 'purchase_entry',
-    'username' => 'root',
-    'password' => 'root',  // empty string '' for typical XAMPP/WAMP
-    'charset' => 'utf8mb4',
-];
-```
-
-No other code changes should be required.
-
-Optional: timezone and hash salt live in `config/app.php` (`Asia/Dhaka` by default).
+---
 
 ## 5. Open and test under localhost
 
-Point your browser at the **public** front controller (`index.php`).  
-Links use `/index.php/...` so the app works even when Apache `mod_rewrite` is disabled (common on some MAMP setups). If rewrite is enabled, the optional `.htaccess` rules still apply.
+After the wizard:
 
 | Stack | Entry form | Report |
 |-------|------------|--------|
-| MAMP (port 8888) | http://localhost:8888/purchase-entry-track/public/index.php | http://localhost:8888/purchase-entry-track/public/index.php/report |
-| Apache port 80 | http://localhost/purchase-entry-track/public/index.php | http://localhost/purchase-entry-track/public/index.php/report |
+| MAMP (8888) | http://localhost:8888/purchase-entry-track/ | http://localhost:8888/purchase-entry-track/report |
+| Apache :80 | http://localhost/purchase-entry-track/ | http://localhost/purchase-entry-track/report |
+
+Apache may show `/report/` with a trailing slash; that is normal.
+
+AJAX store endpoint: `POST …/purchase-entry-track/purchase/store/`
 
 ### Smoke-test checklist
 
-1. **Entry form** loads at `.../public/index.php`.
-2. Add one or more **items** with the “Add Item” control, fill required fields, submit — success message via AJAX (no full page reload).
-3. Phone shows a locked **880** prefix; digits only in the input.
-4. Reload and try submitting again within 24 hours — blocked by cookie (“already submitted”).
-5. **Report** page shows seed rows plus any new submission.
-6. Filter report by date range and/or user ID (`entry_by`).
+1. Entry form loads.
+2. Add items via **Add Item**, fill required fields, submit — AJAX success (no full page reload).
+3. Phone shows locked **880** prefix; local digits only in the input.
+4. CSRF token is sent with the AJAX POST (`_token` / `X-CSRF-TOKEN`).
+5. Second submit within 24 hours is blocked by cookie `purchase_submitted`.
+6. Report shows seed rows + new submissions.
+7. Filter by date range and/or user ID (`entry_by`).
+8. Change **Per page** at the **bottom** of the report (5 / 10 / 25 / 50).
+9. Report table: serial `#` on the left; **Details** on the right expands email / phone / note / IP.
 
-### Sample form values (valid)
+### Sample valid form values
 
 | Field | Example |
 |-------|---------|
@@ -122,37 +167,45 @@ Links use `/index.php/...` so the app works even when Apache `mod_rewrite` is di
 | Phone | `1712345678` → stored as `8801712345678` |
 | Entry By | `1` |
 
+---
+
 ## Architecture overview
 
-Custom **Laravel-inspired MVC** (plain PHP — no Laravel/Composer framework):
+Custom MVC + OOP (plain PHP):
 
 ```text
-public/index.php
-  → bootstrap/autoload.php + bootstrap/app.php
-  → routes/web.php
-  → Middleware → FormRequest → Controller → Service → Model (PDO)
-  → Response / resources/views
+Request → entry script (/, /report, /purchase/store/) → Controller → Model (PDO) → View
 ```
 
 ### Folder structure
 
 ```text
 purchase-entry-track/
+├── index.php            → `/purchase-entry-track/`
+├── install/index.php    → `/purchase-entry-track/install/` (first-run DB wizard)
+├── report/index.php     → `/purchase-entry-track/report`
+├── purchase/store/index.php → `POST …/purchase/store/`
+├── bootstrap.php        shared boot (autoload, session, install gate)
 ├── app/
-│   ├── Foundation/      Application, Container, Request, Response, Router, View, DB, Validator
-│   ├── Http/
-│   │   ├── Controllers/ PurchaseController, ReportController
-│   │   ├── Middleware/  PreventDuplicateSubmission
-│   │   └── Requests/    StorePurchaseRequest
+│   ├── Controllers/     PurchaseController, ReportController
 │   ├── Models/          Purchase
-│   ├── Services/        PurchaseService
-│   └── Support/         helpers (app, config, view, response)
-├── bootstrap/           autoload.php, app.php
-├── routes/web.php       route definitions
-├── resources/views/     layouts + pages
-├── config/              app.php, database.php
-├── database/            purchase_entry.sql
-├── public/              front controller + assets
+│   ├── Views/           layouts, purchase/form, report/index
+│   └── Core/            Router, Database, Controller, Model, Validator, Csrf
+├── config/
+│   ├── app.php          timezone, hash salt, cookie settings
+│   └── database.php     DB credentials (edit this for local MySQL)
+├── database/
+│   └── purchase_entry.sql
+├── public/
+│   ├── index.php        app bootstrap + routes (also valid entry URL)
+│   ├── .htaccess        optional rewrite (wrapped in IfModule)
+│   └── assets/
+│       ├── css/style.css
+│       └── js/form.js, report.js
+├── tests/               PHPUnit unit tests
+├── composer.json        optional (PHPUnit + PHPCS only)
+├── phpunit.xml
+├── phpcs.xml
 ├── README.md
 ├── CLAUDE.md
 └── AI_USAGE.md
@@ -160,42 +213,87 @@ purchase-entry-track/
 
 | Layer | Responsibility |
 |-------|----------------|
-| **Middleware** | Cross-cutting HTTP rules (24h cookie lock) |
-| **FormRequest** | Backend validation rules for store |
-| **Controller** | HTTP in/out only |
-| **Service** | Hash, cookie, pagination orchestration |
-| **Model** | PDO queries only |
+| **Controller** | HTTP input, CSRF, validation orchestration, cookies, JSON/HTML |
+| **Model** | PDO prepared statements only |
+| **View** | HTML templates (`htmlspecialchars` on output) |
+| **Core** | Router, Database, Validator, Csrf, base Controller/Model |
+
+---
+
 ## Behaviour notes (design decisions)
 
-- **`buyer_ip`** — taken from `$_SERVER['REMOTE_ADDR']` only; never from POST.
-- **`hash_key`** — `hash('sha512', receipt_id . salt)` using `config/app.php` salt.
-- **`entry_at`** — current date in `Asia/Dhaka` (configurable).
-- **24-hour lock** — HttpOnly cookie `purchase_submitted` (TTL 86400s); also checked on the server before insert.
-- **Items** — stored as a comma-separated string in `items` (varchar 255), matching the schema.
-- **Receipt ID** — letters only (interpreted as “text only”).
-- **Phone** — JS prepends `880`; backend requires the value to start with `880`.
+| Topic | Decision |
+|-------|----------|
+| `buyer_ip` | From `$_SERVER['REMOTE_ADDR']` only — never from POST |
+| `hash_key` | `hash('sha512', receipt_id . salt)` via `config/app.php` |
+| `entry_at` | Current date in `Asia/Dhaka` (configurable) |
+| CSRF | Session token; required on `POST /purchase/store` |
+| 24h lock | HttpOnly cookie stores unlock timestamp; form shows next available time + live countdown |
+| Items | Comma-separated string in `items` (varchar 255) |
+| Receipt ID | Letters only (“text only”) |
+| Phone | JS prepends `880`; backend requires leading `880` |
+| Report | Filters + pagination; serial `#` left, **Details** right; email/phone/note/IP in expand panel. Query omits unused `hash_key`. |
+| Frontend UX | Realtime form validation; report accordion Details / Hide + Esc to close |
+
+---
 
 ## Required credentials (defaults)
 
 | Item | Default |
 |------|---------|
+| Setup wizard | `/install/` (UI — preferred) |
 | DB name | `purchase_entry` |
 | DB user | `root` |
 | DB password | `root` (MAMP) or empty (XAMPP/WAMP) |
 | DB host/port | `127.0.0.1:8889` (MAMP) or `:3306` (XAMPP/WAMP) |
 
-There is no application login; `entry_by` is a numeric user id entered on the form.
+There is no application login; `entry_by` is a numeric user id on the form.
+
+---
+
+## Optional only: PHPUnit & PHPCS (Composer)
+
+**Skip this section to run the project.** The browser app does not load `vendor/` and does not call Composer.
+
+Use Composer only if you want automated tests or PSR-12 checks on a machine that has Composer installed:
+
+```bash
+cd purchase-entry-track
+composer install          # installs PHPUnit + PHPCS into vendor/ (dev only)
+composer test             # PHPUnit (Validator, Csrf, Router)
+composer phpcs            # PSR-12 via phpcs.xml
+composer phpcbf           # auto-fix some style issues
+```
+
+If you never run `composer install`, the project still runs normally in the browser.
+
+---
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| Database connection failed | Fix `config/database.php` host/port/user/password. |
-| 404 on report or store | Use `.../public/index.php/report` and `.../public/index.php/purchase/store` (PATH_INFO). Enable `mod_rewrite` only if you want shorter URLs. |
-| 500 mentioning `RewriteEngine` | Your Apache build lacks `mod_rewrite`. This project wraps rewrite rules in `<IfModule>`; use the `index.php/...` URLs above. |
-| Blank page | Check PHP error log; require PHP 8.0+. |
-| Cannot resubmit for testing | Clear site cookies for localhost, or delete the `purchase_submitted` cookie. |
+| Database connection failed | Re-open `/install/`, fix credentials, Save again (or check MySQL is running) |
+| Redirected to `/install/` forever | Finish the wizard; ensure `config/` is writable so `installed.lock` can be created |
+| Setup cannot write config | Give the web server write permission on `config/` |
+| 404 on report or store | Open `…/purchase-entry-track/report` and `…/purchase/store/` (folder entry points) |
+| 500 mentioning `RewriteEngine` | App does not require rewrite; ignore or leave `IfModule` wrappers as-is |
+| CSS/JS missing | Hard-refresh; assets are under `/purchase-entry-track/public/assets/` |
+| CSRF token mismatch | Refresh the form page so a new session token loads |
+| Cannot resubmit for testing | Delete cookie `purchase_submitted` (and optionally clear session) |
+| Blank page / `str_starts_with` undefined | Use PHP **7.4+**. Update XAMPP/WAMP PHP, or switch MAMP to PHP 8.x. Polyfills load from `bootstrap.php`. |
+| Do I need `composer install`? | **No** — only for optional `composer test` / `composer phpcs` |
+| `composer test` fails | Run `composer install` first (tests only; app still runs without it) |
+
+---
 
 ## Deliverable ZIP
 
-Zip the entire `purchase-entry-track` folder (including `database/purchase_entry.sql` and the three markdown docs) for submission.
+Zip the project folder including:
+
+- Full source (`app/`, `public/`, `config/`, `database/`, `tests/`)
+- `database/purchase_entry.sql`
+- `README.md`, `CLAUDE.md`, `AI_USAGE.md`
+- `composer.json`, `phpunit.xml`, `phpcs.xml`
+
+You may omit `vendor/` from the ZIP. Reviewers **do not** need `composer install` to run the app; that command is only for optional tests.

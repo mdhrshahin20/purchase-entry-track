@@ -1,31 +1,28 @@
 <?php
 
 /**
- * Front controller — Laravel-style bootstrap.
+ * Front controller — optional PATH_INFO / rewrite entry under /public.
+ *
+ * Prefer project clean URLs:
+ *   /purchase-entry-track/
+ *   /purchase-entry-track/report
+ *   POST /purchase-entry-track/purchase/store/
  */
 
 declare(strict_types=1);
 
-require dirname(__DIR__) . '/bootstrap/autoload.php';
+require dirname(__DIR__) . '/bootstrap.php';
 
-/** @var \App\Foundation\Application $app */
-$app = require dirname(__DIR__) . '/bootstrap/app.php';
+use App\Controllers\PurchaseController;
+use App\Controllers\ReportController;
+use App\Core\Router;
 
-$router = $app->router();
-require dirname(__DIR__) . '/routes/web.php';
+$router = new Router();
+$router->get('/', [PurchaseController::class, 'index']);
+$router->post('/purchase/store', [PurchaseController::class, 'store']);
+$router->get('/report', [ReportController::class, 'index']);
 
-$request = \App\Foundation\Request::capture();
-
-try {
-    $response = $app->handle($request);
-} catch (\Throwable $e) {
-    $message = $e->getMessage();
-    $wantsJson = str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')
-        || strcasecmp((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''), 'XMLHttpRequest') === 0;
-
-    $response = $wantsJson
-        ? \App\Foundation\Response::json(['success' => false, 'message' => $message], 500)
-        : \App\Foundation\Response::make($message, 500);
-}
-
-$response->send();
+$router->dispatch(
+    $_SERVER['REQUEST_METHOD'] ?? 'GET',
+    $_SERVER['REQUEST_URI'] ?? '/'
+);
